@@ -1,7 +1,7 @@
 "use client";
-import { use, useEffect, useRef} from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { Company } from "@/types/company";
-import * as echarts from 'echarts';
+import * as echarts from "echarts";
 
 // Sample data for demonstration; replace with real data fetching in production
 const sampleCompanies: Company[] = [
@@ -28,6 +28,41 @@ const sampleCompanies: Company[] = [
   },
 ];
 
+const candleTableData = [
+  {
+    date: "2024-10-24",
+    open: 20,
+    close: 34,
+    low: 10,
+    high: 38,
+    volume: 100000,
+  },
+  {
+    date: "2024-10-25",
+    open: 40,
+    close: 35,
+    low: 30,
+    high: 50, 
+    volume: 120000,
+  },
+  {
+    date: "2024-10-26",
+    open: 31,
+    close: 38,
+    low: 33,
+    high: 44,
+    volume: 90000,
+  },
+  {
+    date: "2024-10-27",
+    open: 38,
+    close: 15,
+    low: 5,
+    high: 42,
+    volume: 110000,
+  },
+];
+
 interface CompanyDetailProps {
   params: Promise<{ ticker: string }>;
 }
@@ -39,31 +74,38 @@ export default function CompanyDetailPage({ params }: CompanyDetailProps) {
     (c) => c.ticker.toLowerCase() === ticker.toLowerCase()
   );
 
-  // Ref for the chart DOM node
+  // Date filter state
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  // Filtered data
+  const filteredData = candleTableData.filter((row) => {
+    const date = row.date;
+    const afterFrom = !from || date >= from;
+    const beforeTo = !to || date <= to;
+    return afterFrom && beforeTo;
+  });
+
+  // Candlestick chart data
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Candlestick sample data
-    const candleData = [
-      [20, 34, 10, 38],
-      [40, 35, 30, 50],
-      [31, 38, 33, 44],
-      [38, 15, 5, 42],
-    ];
-
-    const xData = ["2024-10-24", "2024-10-25", "2024-10-26", "2024-10-27"];
-
     if (chartRef.current) {
       const myChart = echarts.init(chartRef.current);
       const option = {
         xAxis: {
-          data: xData,
+          data: filteredData.map((row) => row.date),
         },
         yAxis: {},
         series: [
           {
             type: "candlestick",
-            data: candleData,
+            data: filteredData.map((row) => [
+              row.open,
+              row.close,
+              row.low,
+              row.high,
+            ]),
           },
         ],
       };
@@ -74,7 +116,7 @@ export default function CompanyDetailPage({ params }: CompanyDetailProps) {
         myChart.dispose();
       };
     }
-  }, []);
+  }, [filteredData]);
 
   if (!company) {
     return (
@@ -87,15 +129,69 @@ export default function CompanyDetailPage({ params }: CompanyDetailProps) {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">
-        {company.name} ({company.ticker})
-      </h1>
-      <p className="mb-1">Market Cap: {company.marketCap.toLocaleString()}</p>
-      <p className="mb-1">Price: ${company.price.toFixed(2)}</p>
-      <p className="mb-4">Day Change: {company.dayChange.toFixed(2)}</p>
-      {/* Add chart and more details here */}
-      <div className="mt-6">
+      {/* Title */}
+      <div className="flex flex-col items-center mb-6">
+        <h1 className="text-3xl font-bold text-center">
+          {company.name}
+          <span className="ml-3 text-xl font-mono text-blue-600 dark:text-blue-400">
+            ({company.ticker})
+          </span>
+        </h1>
+      </div>
+
+      {/* Date Filter */}
+      <div className="flex gap-4 mb-4 justify-center">
+        <div>
+          <label className="mr-2">From:</label>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="border rounded px-2 py-1"
+          />
+        </div>
+        <div>
+          <label className="mr-2">To:</label>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="border rounded px-2 py-1"
+          />
+        </div>
+      </div>
+
+      {/* Candlestick Chart */}
+      <div className="mt-6 mb-8">
         <div ref={chartRef} style={{ width: "100%", height: 400 }} />
+      </div>
+
+      {/* Stock Price Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full border rounded shadow bg-white dark:bg-black">
+          <thead className="bg-gray-100 dark:bg-gray-900">
+            <tr>
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-right">Open</th>
+              <th className="px-4 py-2 text-right">Close</th>
+              <th className="px-4 py-2 text-right">Low</th>
+              <th className="px-4 py-2 text-right">High</th>
+              <th className="px-4 py-2 text-right">Volume</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredData.map((row) => (
+              <tr key={row.date} className="border-t">
+                <td className="px-4 py-2">{row.date}</td>
+                <td className="px-4 py-2 text-right">{row.open}</td>
+                <td className="px-4 py-2 text-right">{row.close}</td>
+                <td className="px-4 py-2 text-right">{row.low}</td>
+                <td className="px-4 py-2 text-right">{row.high}</td>
+                <td className="px-4 py-2 text-right">{row.volume.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
