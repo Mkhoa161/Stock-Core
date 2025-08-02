@@ -2,6 +2,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { Company } from "@/types/company";
 import * as echarts from "echarts";
+import AuthGuard from "@/components/AuthGuard";
 
 // Sample data for demonstration; replace with real data fetching in production
 const sampleCompanies: Company[] = [
@@ -120,79 +121,83 @@ export default function CompanyDetailPage({ params }: CompanyDetailProps) {
 
   if (!company) {
     return (
-      <div className="container mx-auto p-4">
-        <h1 className="text-xl font-bold">Company not found</h1>
-        <p>No data available for ticker: {ticker}</p>
-      </div>
+      <AuthGuard>
+        <div className="container mx-auto p-4">
+          <h1 className="text-xl font-bold">Company not found</h1>
+          <p>No data available for ticker: {ticker}</p>
+        </div>
+      </AuthGuard>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      {/* Title */}
-      <div className="flex flex-col items-center mb-6">
-        <h1 className="text-3xl font-bold text-center">
-          {company.name}
-          <span className="ml-3 text-xl font-mono text-blue-600 dark:text-blue-400">
-            ({company.ticker})
-          </span>
-        </h1>
-      </div>
-
-      {/* Date Filter */}
-      <div className="flex gap-4 mb-4 justify-center">
-        <div>
-          <label className="mr-2">From:</label>
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="border rounded px-2 py-1"
-          />
+    <AuthGuard>
+      <div className="container mx-auto p-4">
+        {/* Title */}
+        <div className="flex flex-col items-center mb-6">
+          <h1 className="text-3xl font-bold text-center">
+            {company.name}
+            <span className="ml-3 text-xl font-mono text-blue-600 dark:text-blue-400">
+              ({company.ticker})
+            </span>
+          </h1>
         </div>
-        <div>
-          <label className="mr-2">To:</label>
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="border rounded px-2 py-1"
-          />
+
+        {/* Date Filter */}
+        <div className="flex gap-4 mb-4 justify-center">
+          <div>
+            <label className="mr-2">From:</label>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="border rounded px-2 py-1"
+            />
+          </div>
+          <div>
+            <label className="mr-2">To:</label>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="border rounded px-2 py-1"
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Candlestick Chart */}
-      <div className="mt-6 mb-8">
-        <div ref={chartRef} style={{ width: "100%", height: 400 }} />
-      </div>
+        {/* Candlestick Chart */}
+        <div className="mt-6 mb-8">
+          <div ref={chartRef} style={{ width: "100%", height: 400 }} />
+        </div>
 
-      {/* Stock Price Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full border rounded shadow bg-white dark:bg-black">
-          <thead className="bg-gray-100 dark:bg-gray-900">
-            <tr>
-              <th className="px-4 py-2 text-left">Date</th>
-              <th className="px-4 py-2 text-right">Open</th>
-              <th className="px-4 py-2 text-right">Close</th>
-              <th className="px-4 py-2 text-right">Low</th>
-              <th className="px-4 py-2 text-right">High</th>
-              <th className="px-4 py-2 text-right">Volume</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((row) => (
-              <tr key={row.date} className="border-t">
-                <td className="px-4 py-2">{row.date}</td>
-                <td className="px-4 py-2 text-right">{row.open}</td>
-                <td className="px-4 py-2 text-right">{row.close}</td>
-                <td className="px-4 py-2 text-right">{row.low}</td>
-                <td className="px-4 py-2 text-right">{row.high}</td>
-                <td className="px-4 py-2 text-right">{row.volume.toLocaleString()}</td>
+        {/* Stock Price Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full border rounded shadow bg-white dark:bg-black">
+            <thead className="bg-gray-100 dark:bg-gray-900">
+              <tr>
+                <th className="px-4 py-2 text-left">Date</th>
+                <th className="px-4 py-2 text-right">Open</th>
+                <th className="px-4 py-2 text-right">Close</th>
+                <th className="px-4 py-2 text-right">Low</th>
+                <th className="px-4 py-2 text-right">High</th>
+                <th className="px-4 py-2 text-right">Volume</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredData.map((row) => (
+                <tr key={row.date} className="border-t">
+                  <td className="px-4 py-2">{row.date}</td>
+                  <td className="px-4 py-2 text-right">{row.open}</td>
+                  <td className="px-4 py-2 text-right">{row.close}</td>
+                  <td className="px-4 py-2 text-right">{row.low}</td>
+                  <td className="px-4 py-2 text-right">{row.high}</td>
+                  <td className="px-4 py-2 text-right">{row.volume.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }
