@@ -1,0 +1,30 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/health
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  title: Health Check
+  description: |
+    Verify that the server is running and responding to requests.
+    
+    This should be the first test to run in any test suite.
+    
+  examples: |
+    **Expected Response (200):**
+    ```json
+    {
+      "status": "ok",
+      "timestamp": "2024-01-01T00:00:00.000Z"
+    }
+    ```
+} 

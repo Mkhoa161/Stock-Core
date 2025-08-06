@@ -1,0 +1,46 @@
+meta {
+  name: Logout
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/auth/logout
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  title: Logout
+  description: |
+    Test logout functionality with dual authentication support.
+    
+    This test:
+    - Clears the token cookie from browser
+    - Returns success message
+    - No authentication required
+    - Supports both Bearer tokens and cookies
+    
+    **Note:** The server clears the cookie automatically.
+    For Bearer token users, the client should also remove
+    the token from localStorage/sessionStorage.
+    
+  examples: |
+    **Expected Response (200):**
+    ```json
+    {
+      "message": "Logout successful. Token cookie cleared. Please also remove Bearer token from client storage if used."
+    }
+    ```
+    
+    **Frontend Implementation:**
+    ```javascript
+    const handleLogout = async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      localStorage.removeItem('token'); // Remove Bearer token
+    };
+    ```
+} 
