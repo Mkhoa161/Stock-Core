@@ -319,58 +319,114 @@ npm run lint         # Run ESLint
 - **Dual Authentication**: Bearer tokens and HTTP-only cookies
 - **CORS Configuration**: Proper CORS setup for frontend integration
 
-## Production Deployment
+## Production Deployment (Amazon RDS)
+
+### Prerequisites
+
+1. **Amazon RDS PostgreSQL Instance**
+   - Create a PostgreSQL RDS instance
+   - Note down: host, port, database name, username, password
+   - Ensure security groups allow connections from your EC2 instance
+
+2. **Environment Variables**
+   ```env
+   NODE_ENV=production
+   DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
+   DB_PORT=5432
+   DB_NAME=stock_insight
+   DB_USER=your_username
+   DB_PASSWORD=your_password
+   ```
 
 ### Database Setup
 
-**For PostgreSQL (Production):**
+#### Option 1: Automatic Table Creation (Recommended)
+Tables are automatically created when the application starts:
 
-1. **Set Environment Variables:**
-```env
-NODE_ENV=production
-DB_HOST=your-rds-endpoint.amazonaws.com
-DB_PORT=5432
-DB_NAME=stock_insight
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
+```bash
+# Set environment variables
+export NODE_ENV=production
+export DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
+export DB_PORT=5432
+export DB_NAME=stock_insight
+export DB_USER=your_username
+export DB_PASSWORD=your_password
+
+# Start the application (tables will be created automatically)
+npm start
 ```
 
-2. **Create PostgreSQL Tables:**
-```sql
-CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255),
-  username VARCHAR(255),
-  first_name VARCHAR(255),
-  last_name VARCHAR(255),
-  avatar TEXT,
-  google_id VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+#### Option 2: Manual Table Creation
+If you prefer to create tables manually:
+
+```bash
+# Set environment variables first
+export NODE_ENV=production
+export DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
+export DB_PORT=5432
+export DB_NAME=stock_insight
+export DB_USER=your_username
+export DB_PASSWORD=your_password
+
+# Create tables manually
+npm run create-tables
 ```
 
-### AWS Deployment
+### Database Schema
 
-**EC2 Setup:**
-1. Launch EC2 instance
-2. Install Node.js and PM2
-3. Clone repository and install dependencies
-4. Set environment variables
-5. Run `npm run build` and `pm2 start dist/server.js`
+#### Tables Created
 
-**RDS Setup:**
-1. Create PostgreSQL RDS instance
-2. Configure security groups
-3. Update environment variables with RDS endpoint
-4. Create database tables
+1. **users** - User authentication and profiles
+2. **companies** - Company information (ticker, name, sector, industry)
+3. **stock_prices** - Daily OHLC price data for candlestick charts
+4. **daily_summaries** - Aggregated daily data for dashboard
 
-**API Gateway:**
-1. Create REST API
-2. Configure routes to point to EC2
-3. Set up CORS and authentication
-4. Deploy API
+#### Indexes Created
+
+- `idx_companies_ticker` - Fast company lookup by ticker
+- `idx_stock_prices_company_date` - Fast price data retrieval
+- `idx_daily_summaries_company_date` - Fast summary data retrieval
+- `idx_stock_prices_date` - Date-based queries
+- `idx_daily_summaries_date` - Date-based queries
+
+### Deployment Steps
+
+1. **Build the application**
+   ```bash
+   npm run build
+   ```
+
+2. **Set environment variables**
+   ```bash
+   export NODE_ENV=production
+   export DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
+   export DB_PORT=5432
+   export DB_NAME=stock_insight
+   export DB_USER=your_username
+   export DB_PASSWORD=your_password
+   ```
+
+3. **Start the application**
+   ```bash
+   npm start
+   ```
+
+### Troubleshooting
+
+#### Connection Issues
+- Verify RDS security groups allow connections from your EC2 instance
+- Check that environment variables are set correctly
+- Ensure RDS instance is running and accessible
+
+#### Table Creation Issues
+- Verify database user has CREATE TABLE permissions
+- Check database logs for any errors
+- Run `npm run create-tables` manually if automatic creation fails
+
+#### Performance Issues
+- Monitor RDS performance metrics
+- Consider adding more indexes based on query patterns
+- Optimize queries for large datasets
 
 ## Contributing
 
