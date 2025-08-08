@@ -1,0 +1,52 @@
+meta {
+  name: Update Profile
+  type: http
+  seq: 14
+}
+
+put {
+  url: {{baseUrl}}/api/auth/profile
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+body:json {
+  {
+    "first_name": "Updated",
+    "last_name": "Name",
+    "username": "updateduser"
+  }
+}
+
+docs {
+  title: Update Profile
+  description: |
+    Test updating user profile with valid JWT token.
+    
+    This test:
+    - Requires a valid JWT token
+    - Updates user's first name, last name, and username
+    - Should return updated user data
+    
+    **Note:** This test should be run after successfully logging in and getting a token.
+    
+  examples: |
+    **Expected Response (200):**
+    ```json
+    {
+      "message": "Profile updated successfully",
+      "user": {
+        "id": 1,
+        "email": "testuser@example.com",
+        "username": "updateduser",
+        "first_name": "Updated",
+        "last_name": "Name",
+        "updated_at": "2024-01-01T00:00:00.000Z"
+      }
+    }
+    ```
+} 

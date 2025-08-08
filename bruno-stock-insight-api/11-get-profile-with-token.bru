@@ -1,0 +1,43 @@
+meta {
+  name: Get Profile With Token
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/auth/profile
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  title: Get Profile With Token
+  description: |
+    Test getting user profile with valid JWT token.
+    
+    This test:
+    - Requires a valid JWT token in Authorization header
+    - Should return user profile data
+    
+    **Note:** This test should be run after successfully logging in and getting a token.
+    
+  examples: |
+    **Expected Response (200):**
+    ```json
+    {
+      "user": {
+        "id": 1,
+        "email": "testuser@example.com",
+        "username": "testuser",
+        "first_name": "Test",
+        "last_name": "User",
+        "created_at": "2024-01-01T00:00:00.000Z"
+      }
+    }
+    ```
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Get Profile Invalid Token
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/auth/profile
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer invalid.token.here
+}
+
+docs {
+  title: Get Profile Invalid Token
+  description: |
+    Test getting user profile with invalid JWT token.
+    
+    This test should fail because:
+    - Token format is invalid
+    - Token is not properly signed
+    
+  examples: |
+    **Expected Response (401):**
+    ```json
+    {
+      "message": "Access token required"
+    }
+    ```
+} 

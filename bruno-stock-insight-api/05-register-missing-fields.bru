@@ -1,0 +1,37 @@
+meta {
+  name: Register Missing Fields
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/auth/register
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "testuser@example.com"
+  }
+}
+
+docs {
+  title: Register Missing Fields
+  description: |
+    Test registration with missing required fields.
+    
+    This test should fail because:
+    - Password is missing (required field)
+    
+  examples: |
+    **Expected Response (400):**
+    ```json
+    {
+      "message": "Email and password are required"
+    }
+    ```
+} 
