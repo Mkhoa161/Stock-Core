@@ -15,6 +15,7 @@
   "dependencies": {
     "@types/cookie-parser": "^1.4.9",
     "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
     "@types/pg": "^8.15.5",
@@ -26,6 +27,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pg": "^8.16.3",

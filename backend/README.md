@@ -1,102 +1,67 @@
-# Backend Authentication System
+# Stock Insight Backend API
 
-This backend implements a comprehensive authentication system using JWT tokens, password-based authentication, and Google OAuth integration with **dual authentication support** (Bearer tokens and cookies).
+A robust Node.js/Express backend with comprehensive authentication system, supporting username/password login, JWT tokens, Google OAuth, and dual authentication schemes.
 
 ## Features
 
-- **User Registration & Login**: Email/password authentication with bcrypt password hashing
-- **JWT Token Authentication**: Secure token-based authentication with configurable expiration
+- **Authentication**: Username/password with bcrypt password hashing
+- **JWT Tokens**: Secure token-based authentication with 24-hour expiration
 - **Dual Authentication**: Supports both Bearer tokens and HTTP-only cookies
-- **Google OAuth Integration**: Login with Google accounts
-- **User Profile Management**: Get and update user profiles
-- **Protected Routes**: Middleware for route protection
-- **CORS Support**: Cross-origin resource sharing enabled
-- **Flexible Logout**: Clears cookies and supports client-side token removal
+- **Google OAuth**: Complete Google OAuth integration with automatic user creation/linking
+- **Database**: SQLite for development, PostgreSQL for production
+- **Security**: CSRF protection, input validation, secure error handling
+- **Testing**: Comprehensive Bruno API test suite (16 test cases)
+- **Error Handling**: User-friendly error messages with proper HTTP status codes
 
-## Authentication Methods
+## Quick Start
 
-### **🔐 Bearer Token Authentication**
-```javascript
-// Login - get token in response
-const response = await fetch('/api/auth/login', {
-  method: 'POST',
-  body: JSON.stringify({ email, password })
-});
-const { token } = await response.json();
+### Prerequisites
 
-// Use token in Authorization header
-const profile = await fetch('/api/auth/profile', {
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
-});
-```
+- Node.js (v16 or higher)
+- npm or yarn
 
-### **🍪 Cookie-Based Authentication**
-```javascript
-// Login - token automatically set in cookie
-const response = await fetch('/api/auth/login', {
-  method: 'POST',
-  body: JSON.stringify({ email, password })
-});
-
-// Token automatically included in subsequent requests
-const profile = await fetch('/api/auth/profile');
-```
-
-### **🔄 Dual Support**
-The system automatically detects and supports both methods:
-- **Bearer tokens** take precedence if present
-- **Cookies** are used as fallback
-- **Logout** clears cookies and advises client-side cleanup
-
-## Setup
-
-### 1. Install Dependencies
+### Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd backend
+
+# Install dependencies
 npm install
+
+# Create .env file
+cp .env.example .env
+# Edit .env with your configuration
+
+# Start development server
+npm run dev
 ```
 
-### 2. Environment Variables
+### Environment Variables
 
-Create a `.env` file in the backend directory with the following variables:
+Create a `.env` file in the backend directory:
 
 ```env
 # Server Configuration
-PORT=3000
 NODE_ENV=development
+PORT=3000
 
 # JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_SECRET=your-super-secret-jwt-key-here
 
-# Google OAuth Configuration
+# Google OAuth (Optional - for Google login)
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
-
-# Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:3001
-```
 
-### 3. Google OAuth Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the Google+ API
-4. Go to Credentials → Create Credentials → OAuth 2.0 Client IDs
-5. Set the authorized redirect URI to: `http://localhost:3000/api/auth/google/callback`
-6. Copy the Client ID and Client Secret to your `.env` file
-
-### 4. Run the Server
-
-```bash
-# Development mode
-npm run dev
-
-# Production mode
-npm run build
-npm start
+# Database (for production)
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=stock_insight
+DB_USER=postgres
+DB_PASSWORD=your_password
 ```
 
 ## API Endpoints
@@ -108,7 +73,7 @@ npm start
 - `POST /api/auth/logout` - Logout (clears cookies, advises Bearer cleanup)
 - `GET /api/auth/profile` - Get current user profile (protected)
 - `PUT /api/auth/profile` - Update user profile (protected)
-- `GET /api/auth/google` - Get Google OAuth URL
+- `GET /api/auth/google` - Redirect to Google OAuth
 - `GET /api/auth/google/callback` - Google OAuth callback
 
 ### Protected Routes
@@ -124,20 +89,59 @@ router.get('/protected-route', authenticateToken, (req, res) => {
 });
 ```
 
+## Google OAuth Setup
+
+### 1. Google Cloud Console Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the Google+ API
+4. Go to Credentials → Create Credentials → OAuth 2.0 Client IDs
+5. Set the authorized redirect URI to: `http://localhost:3000/api/auth/google/callback`
+6. Copy the Client ID and Client Secret to your `.env` file
+
+### 2. Testing Google OAuth
+
+**Manual Testing:**
+1. Start your server: `npm run dev`
+2. Visit `http://localhost:3000/api/auth/google` in your browser
+3. Complete Google authentication
+4. You'll be redirected to your frontend with a token
+
+**Frontend Integration:**
+```javascript
+// Simple redirect approach
+const handleGoogleLogin = () => {
+  window.location.href = '/api/auth/google';
+};
+
+// Or as a link
+<a href="/api/auth/google">Login with Google</a>
+```
+
+### 3. Google OAuth Flow
+
+1. **User clicks "Login with Google"** → Frontend redirects to `/api/auth/google`
+2. **Server redirects to Google** → Google OAuth page
+3. **User authenticates on Google** → Google redirects to `/api/auth/google/callback`
+4. **Server processes callback** → Creates/updates user, generates JWT
+5. **User is logged in** → Redirected to frontend with token
+
 ## Request/Response Examples
 
-### Register User
+### Registration
 
 **Request:**
-```json
-POST /api/auth/register
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "username": "johndoe",
-  "firstName": "John",
-  "lastName": "Doe"
-}
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123!",
+    "username": "johndoe",
+    "firstName": "John",
+    "lastName": "Doe"
+  }'
 ```
 
 **Response:**
@@ -145,26 +149,27 @@ POST /api/auth/register
 {
   "message": "User registered successfully",
   "user": {
-    "id": "1234567890",
+    "id": 1,
     "email": "user@example.com",
     "username": "johndoe",
     "firstName": "John",
     "lastName": "Doe",
-    "avatar": null
+    "createdAt": "2024-01-15T10:30:00.000Z"
   },
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-### Login (Dual Support)
+### Login
 
 **Request:**
-```json
-POST /api/auth/login
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123!"
+  }'
 ```
 
 **Response:**
@@ -172,156 +177,203 @@ POST /api/auth/login
 {
   "message": "Login successful",
   "user": {
-    "id": "1234567890",
+    "id": 1,
     "email": "user@example.com",
     "username": "johndoe",
     "firstName": "John",
-    "lastName": "Doe",
-    "avatar": null
+    "lastName": "Doe"
   },
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**Note:** Token is also set as HTTP-only cookie automatically.
-
-### Logout (Dual Support)
+### Protected Route Access
 
 **Request:**
-```json
-POST /api/auth/logout
-```
-
-**Response:**
-```json
-{
-  "message": "Logout successful. Token cookie cleared. Please also remove Bearer token from client storage if used."
-}
-```
-
-### Protected Route Example
-
-**Bearer Token:**
-```
-GET /api/auth/profile
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**Cookie (automatic):**
-```
-GET /api/auth/profile
+```bash
+curl -X GET http://localhost:3000/api/auth/profile \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 **Response:**
 ```json
 {
   "user": {
-    "id": "1234567890",
+    "id": 1,
     "email": "user@example.com",
     "username": "johndoe",
     "firstName": "John",
     "lastName": "Doe",
-    "avatar": null,
-    "createdAt": "2024-01-01T00:00:00.000Z"
+    "createdAt": "2024-01-15T10:30:00.000Z"
   }
 }
 ```
 
-## Frontend Implementation
+## Error Handling
 
-### **Bearer Token Approach:**
-```javascript
-// Login
-const login = async (credentials) => {
-  const response = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials)
-  });
-  
-  const data = await response.json();
-  localStorage.setItem('token', data.token);
-  return data;
-};
+The API provides user-friendly error messages with appropriate HTTP status codes:
 
-// API calls
-const apiCall = async (url) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  return response.json();
-};
+- **400 Bad Request**: Invalid input data (email format, password strength)
+- **401 Unauthorized**: Invalid credentials or missing token
+- **409 Conflict**: Email already exists during registration
+- **500 Internal Server Error**: Server-side errors
 
-// Logout
-const logout = async () => {
-  await fetch('/api/auth/logout', { method: 'POST' });
-  localStorage.removeItem('token');
-};
+**Example Error Response:**
+```json
+{
+  "message": "A user with this email already exists"
+}
 ```
 
-### **Cookie Approach:**
-```javascript
-// Login (cookies handled automatically)
-const login = async (credentials) => {
-  const response = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials),
-    credentials: 'include' // Important for cookies
-  });
-  
-  return response.json();
-};
+## Testing
 
-// API calls (cookies sent automatically)
-const apiCall = async (url) => {
-  const response = await fetch(url, {
-    credentials: 'include' // Important for cookies
-  });
-  return response.json();
-};
+### Bruno Test Suite
 
-// Logout
-const logout = async () => {
-  await fetch('/api/auth/logout', { 
-    method: 'POST',
-    credentials: 'include'
-  });
-};
+The project includes a comprehensive Bruno test suite with 16 test cases covering:
+
+- Health check endpoint
+- User registration (valid, invalid email, weak password, missing fields, duplicate)
+- User login (valid, invalid email, wrong password, missing fields)
+- Profile management (with/without/invalid tokens)
+- Profile updates
+- Logout functionality
+- Post-logout verification
+
+**Running Tests:**
+1. Install Bruno: `npm install -g @usebruno/cli`
+2. Open Bruno and import the `bruno-stock-insight-api` collection
+3. Set the environment variables in Bruno
+4. Run the test suite
+
+### Manual Testing
+
+**Test Registration:**
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "TestPass123!"}'
 ```
 
-## Authentication Flow
+**Test Login:**
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "TestPass123!"}'
+```
 
-### **Login Process:**
-1. **User submits credentials** → Server validates
-2. **Server generates JWT** → Token with 24h expiration
-3. **Token set in cookie** → HTTP-only, secure cookie
-4. **Token returned in response** → Available for Bearer usage
-5. **Subsequent requests** → Can use either method
+## Development
 
-### **Logout Process:**
-1. **User clicks logout** → Client calls `/api/auth/logout`
-2. **Server clears cookie** → Token removed from browser
-3. **Client removes Bearer token** → Clean up localStorage
-4. **User appears logged out** → No token available
+### Project Structure
 
-### **Security Features:**
-- **JWT tokens expire** after 24 hours automatically
-- **Password hashing** with bcrypt (12 salt rounds)
-- **Input validation** for all user inputs
-- **CORS protection** for cross-origin requests
-- **Dual authentication** - flexible for different client types
-- **HTTP-only cookies** - secure against XSS attacks
+```
+backend/
+├── src/
+│   ├── config/
+│   │   ├── config.ts          # Configuration management
+│   │   ├── database.ts         # Database connection (SQLite/PostgreSQL)
+│   │   └── passport.ts         # Passport.js strategies
+│   ├── controllers/
+│   │   └── itemController.ts   # Item-related controllers
+│   ├── middlewares/
+│   │   ├── authMiddleware.ts   # Authentication middleware
+│   │   └── errorHandler.ts     # Global error handling
+│   ├── models/
+│   │   └── user.ts            # User data interfaces
+│   ├── routes/
+│   │   ├── authRoutes.ts      # Authentication routes
+│   │   └── itemRoutes.ts      # Item routes
+│   ├── services/
+│   │   ├── authService.ts     # JWT operations
+│   │   └── userService.ts     # User database operations
+│   ├── utils/
+│   │   └── authUtils.ts       # Authentication utilities
+│   ├── app.ts                 # Express app setup
+│   └── server.ts              # Server entry point
+├── bruno-stock-insight-api/   # Bruno test collection
+├── package.json
+└── tsconfig.json
+```
+
+### Available Scripts
+
+```bash
+npm run dev          # Start development server with hot reload
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+```
 
 ## Security Features
 
-- **Password Hashing**: All passwords are hashed using bcrypt with salt rounds of 12
-- **JWT Tokens**: Secure token-based authentication with 24-hour expiration
-- **CORS Protection**: Configured to allow only specified origins
-- **Input Validation**: Server-side validation for all user inputs
-- **Error Handling**: Comprehensive error handling with appropriate HTTP status codes
-- **Dual Authentication**: Supports both Bearer tokens and HTTP-only cookies
-- **Flexible Logout**: Clears cookies and supports client-side token cleanup 
+- **Password Hashing**: bcrypt with 12 salt rounds
+- **JWT Security**: 24-hour expiration, secure secret
+- **Input Validation**: Email format, password strength validation
+- **CSRF Protection**: State parameter in Google OAuth
+- **Error Sanitization**: User-friendly error messages
+- **Dual Authentication**: Bearer tokens and HTTP-only cookies
+- **CORS Configuration**: Proper CORS setup for frontend integration
+
+## Production Deployment
+
+### Database Setup
+
+**For PostgreSQL (Production):**
+
+1. **Set Environment Variables:**
+```env
+NODE_ENV=production
+DB_HOST=your-rds-endpoint.amazonaws.com
+DB_PORT=5432
+DB_NAME=stock_insight
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+```
+
+2. **Create PostgreSQL Tables:**
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255),
+  username VARCHAR(255),
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  avatar TEXT,
+  google_id VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### AWS Deployment
+
+**EC2 Setup:**
+1. Launch EC2 instance
+2. Install Node.js and PM2
+3. Clone repository and install dependencies
+4. Set environment variables
+5. Run `npm run build` and `pm2 start dist/server.js`
+
+**RDS Setup:**
+1. Create PostgreSQL RDS instance
+2. Configure security groups
+3. Update environment variables with RDS endpoint
+4. Create database tables
+
+**API Gateway:**
+1. Create REST API
+2. Configure routes to point to EC2
+3. Set up CORS and authentication
+4. Deploy API
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License. 

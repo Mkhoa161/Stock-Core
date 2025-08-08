@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { userService } from '../services/userService';
 import config from './config';
 
@@ -21,6 +22,45 @@ passport.use(new LocalStrategy({
     const isMatch = await userService.verifyPassword(password, user.password || '');
     if (!isMatch) {
       return done(null, false, { message: 'Invalid credentials' });
+    }
+
+    return done(null, user);
+  } catch (error) {
+    return done(error);
+  }
+}));
+
+// Google OAuth Strategy
+passport.use(new GoogleStrategy({
+  clientID: config.googleClientId,
+  clientSecret: config.googleClientSecret,
+  callbackURL: config.googleRedirectUri,
+  scope: ['profile', 'email']
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    // Check if user already exists by Google ID
+    let user = await userService.findByGoogleId(profile.id);
+    
+    if (!user) {
+      // Check if user exists by email
+      user = await userService.findByEmail(profile.emails?.[0]?.value || '');
+      
+      if (user) {
+        // Update existing user with Google ID
+        user = await userService.updateUser(user.id, { google_id: profile.id });
+      } else {
+        // Create new user
+        const userData = {
+          email: profile.emails?.[0]?.value || '',
+          firstName: profile.name?.givenName || '',
+          lastName: profile.name?.familyName || '',
+          username: profile.emails?.[0]?.value?.split('@')[0] || '',
+          googleId: profile.id,
+          avatar: profile.photos?.[0]?.value || ''
+        };
+        
+        user = await userService.createUser(userData);
+      }
     }
 
     return done(null, user);

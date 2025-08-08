@@ -10,43 +10,65 @@ const router = Router();
 // Register new user
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    // Check if req.body exists
     if (!req.body) {
       return res.status(400).json({ message: 'Request body is required' });
     }
-    
-    // Support both JSON and form data
-    const email = req.body.email || req.body['email'];
-    const password = req.body.password || req.body['password'];
-    const username = req.body.username || req.body['username'];
-    const firstName = req.body.firstName || req.body['firstName'];
-    const lastName = req.body.lastName || req.body['lastName'];
-    
-    // Validation
+
+    const { email, password, username, firstName, lastName } = req.body;
+
+    // Validate required fields
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
+    // Validate email format
     if (!isValidEmail(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
+      return res.status(400).json({ message: 'Please provide a valid email address' });
     }
 
+    // Validate password strength
     if (!isStrongPassword(password)) {
       return res.status(400).json({ 
-        message: 'Password must be at least 8 characters with uppercase, lowercase, and number' 
+        message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' 
       });
     }
 
-    // Use AuthService for registration
-    const result = await authService.register({ email, password, username, firstName, lastName });
-    
+    // Create user
+    const user = await userService.createUser({
+      email,
+      password,
+      username,
+      firstName,
+      lastName
+    });
+
+    // Generate JWT token
+    const token = authService.generateToken(user);
+
+    // Set token in HTTP-only cookie
+    res.cookie('stock-insight-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     res.status(201).json({
       message: 'User registered successfully',
-      user: sanitizeUser(result.user),
-      token: result.token,
+      user: sanitizeUser(user),
+      token
     });
   } catch (error: any) {
-    res.status(400).json({ message: formatAuthError(error) });
+    // Handle specific error types
+    if (error.message === 'A user with this email already exists') {
+      return res.status(409).json({ message: error.message });
+    }
+    if (error.message.includes('Registration failed due to data validation error')) {
+      return res.status(400).json({ message: error.message });
+    }
+    
+    // Handle other errors
+    res.status(500).json({ message: formatAuthError(error) });
   }
 });
 
@@ -129,8 +151,61 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
       user: sanitizeUser(user),
     });
   } catch (error: any) {
+    // Handle specific error types
+    if (error.message === 'A user with this email already exists') {
+      return res.status(409).json({ message: error.message });
+    }
+    if (error.message.includes('Update failed due to data validation error')) {
+      return res.status(400).json({ message: error.message });
+    }
+    
     res.status(500).json({ message: formatAuthError(error) });
   }
 });
+
+// Google OAuth Routes
+// Redirect to Google OAuth
+router.get('/google', (req: Request, res: Response) => {
+  // Redirect directly to Google OAuth
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
+    `redirect_uri=${process.env.GOOGLE_REDIRECT_URI}&` +
+    `response_type=code&` +
+    `scope=profile email&` +
+    `access_type=offline&` +
+    `state=${Math.random().toString(36).substring(7)}`; // CSRF protection
+  
+  res.redirect(googleAuthUrl);
+});
+
+// Google OAuth callback
+router.get('/google/callback', 
+  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+  async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      
+      if (!user) {
+        return res.status(401).json({ message: 'Google authentication failed' });
+      }
+
+      // Generate JWT token
+      const token = authService.generateToken(user);
+
+      // Set token in HTTP-only cookie
+      res.cookie('stock-insight-token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+
+      // Redirect to frontend with success message
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/success?token=${token}`);
+    } catch (error: any) {
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/error`);
+    }
+  }
+);
 
 export default router; 
