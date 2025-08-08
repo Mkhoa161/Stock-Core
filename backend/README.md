@@ -126,6 +126,12 @@ const handleGoogleLogin = () => {
 3. **User authenticates on Google** → Google redirects to `/api/auth/google/callback`
 4. **Server processes callback** → Creates/updates user, generates JWT
 5. **User is logged in** → Redirected to frontend with token
+6. **Frontend handles errors** → Redirects to login page if authentication fails
+
+**Error Handling:**
+- ✅ **Success**: Redirects to `/auth/success?token=...`
+- ✅ **Failure**: Redirects to `/auth/error?message=authentication_failed`
+- ✅ **Frontend control**: Frontend decides how to handle different error states
 
 ## Request/Response Examples
 

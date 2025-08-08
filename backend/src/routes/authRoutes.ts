@@ -180,7 +180,7 @@ router.get('/google', (req: Request, res: Response) => {
 
 // Google OAuth callback
 router.get('/google/callback', 
-  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+  passport.authenticate('google', { session: false, failWithError: true }),
   async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
@@ -192,7 +192,7 @@ router.get('/google/callback',
       // Generate JWT token
       const token = authService.generateToken(user);
 
-      // Set token in HTTP-only cookie
+      // Set token in HTTP-only cookie (secure)
       res.cookie('stock-insight-token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -200,11 +200,16 @@ router.get('/google/callback',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       });
 
-      // Redirect to frontend with success message
-      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/success?token=${token}`);
+      // Redirect to frontend success page (no token in URL)
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/success`);
     } catch (error: any) {
       res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/error`);
     }
+  },
+  // Error handler for passport authentication failures
+  (error: any, req: Request, res: Response, next: NextFunction) => {
+    console.error('Google OAuth error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/error?message=authentication_failed`);
   }
 );
 
