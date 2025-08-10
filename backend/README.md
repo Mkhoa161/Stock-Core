@@ -8,7 +8,7 @@ A robust Node.js/Express backend with comprehensive authentication system, suppo
 - **JWT Tokens**: Secure token-based authentication with 24-hour expiration
 - **Dual Authentication**: Supports both Bearer tokens and HTTP-only cookies
 - **Google OAuth**: Complete Google OAuth integration with automatic user creation/linking
-- **Database**: SQLite for development, PostgreSQL for production
+- **Database**: PostgreSQL
 - **Security**: CSRF protection, input validation, secure error handling
 - **Testing**: Comprehensive Bruno API test suite (16 test cases)
 - **Error Handling**: User-friendly error messages with proper HTTP status codes
@@ -276,7 +276,7 @@ backend/
 ├── src/
 │   ├── config/
 │   │   ├── config.ts          # Configuration management
-│   │   ├── database.ts         # Database connection (SQLite/PostgreSQL)
+│   │   ├── database.ts         # Database connection (PostgreSQL)
 │   │   └── passport.ts         # Passport.js strategies
 │   ├── controllers/
 │   │   └── itemController.ts   # Item-related controllers

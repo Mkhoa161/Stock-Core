@@ -117,7 +117,7 @@ The tests are organized in a logical sequence to test the complete authenticatio
 ### **Common Issues:**
 - **Server not running**: Run `npm run dev` in backend directory
 - **Port conflicts**: Ensure port 3000 is available
-- **Database issues**: Check SQLite database file exists
+- **Database issues**: Check PostgreSQL connection and credentials
 - **Token issues**: Ensure token is properly copied and set
 
 ### **Debug Steps:**

@@ -11,24 +11,20 @@ export class UserService {
     
     const query = `
       INSERT INTO users (email, password, username, first_name, last_name, google_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      RETURNING *
     `;
     
     try {
-      const result: any = await dbInterface.dbRun(query, [email, hashedPassword, username, firstName, lastName, googleId]);
-      
-      const user = await this.getUserById(result.id);
-      if (!user) {
-        throw new Error('Failed to create user');
-      }
-      return user;
+      const result = await dbInterface.query(query, [email, hashedPassword, username, firstName, lastName, googleId]);
+      return result.rows[0];
     } catch (error: any) {
-      // Handle SQLite unique constraint violation
-      if (error.message && error.message.includes('UNIQUE constraint failed: users.email')) {
+      // Handle PostgreSQL unique constraint violation
+      if (error.code === '23505' && error.constraint === 'users_email_key') {
         throw new Error('A user with this email already exists');
       }
       // Handle other database errors
-      if (error.message && error.message.includes('SQLITE_CONSTRAINT')) {
+      if (error.code === '23514') {
         throw new Error('Registration failed due to data validation error');
       }
       // Re-throw other errors
@@ -37,73 +33,69 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const query = 'SELECT * FROM users WHERE email = ?';
-    const user = await dbInterface.dbGet(query, [email]);
-    return user || null;
+    const query = 'SELECT * FROM users WHERE email = $1';
+    const result = await dbInterface.query(query, [email]);
+    return result.rows[0] || null;
   }
 
   async findByGoogleId(googleId: string): Promise<User | null> {
-    const query = 'SELECT * FROM users WHERE google_id = ?';
-    const user = await dbInterface.dbGet(query, [googleId]);
-    return user || null;
+    const query = 'SELECT * FROM users WHERE google_id = $1';
+    const result = await dbInterface.query(query, [googleId]);
+    return result.rows[0] || null;
   }
 
   async getUserById(id: number): Promise<User | null> {
-    const query = 'SELECT * FROM users WHERE id = ?';
-    const user = await dbInterface.dbGet(query, [id]);
-    return user || null;
+    const query = 'SELECT * FROM users WHERE id = $1';
+    const result = await dbInterface.query(query, [id]);
+    return result.rows[0] || null;
   }
 
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
     const fields: string[] = [];
     const values: any[] = [];
+    let paramCount = 1;
     
     // Build dynamic update query
     if (updates.email !== undefined) {
-      fields.push('email = ?');
+      fields.push(`email = $${paramCount++}`);
       values.push(updates.email);
     }
     if (updates.username !== undefined) {
-      fields.push('username = ?');
+      fields.push(`username = $${paramCount++}`);
       values.push(updates.username);
     }
     if (updates.first_name !== undefined) {
-      fields.push('first_name = ?');
+      fields.push(`first_name = $${paramCount++}`);
       values.push(updates.first_name);
     }
     if (updates.last_name !== undefined) {
-      fields.push('last_name = ?');
+      fields.push(`last_name = $${paramCount++}`);
       values.push(updates.last_name);
     }
     if (updates.google_id !== undefined) {
-      fields.push('google_id = ?');
+      fields.push(`google_id = $${paramCount++}`);
       values.push(updates.google_id);
     }
     if (updates.avatar !== undefined) {
-      fields.push('avatar = ?');
+      fields.push(`avatar = $${paramCount++}`);
       values.push(updates.avatar);
     }
     
-    fields.push('updated_at = datetime("now")');
+    fields.push(`updated_at = NOW()`);
     values.push(id);
     
-    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`;
     
     try {
-      await dbInterface.dbRun(query, values);
-      
-      const user = await this.getUserById(id);
-      if (!user) {
-        throw new Error('Failed to update user');
-      }
-      return user;
+      const result = await dbInterface.query(query, values);
+      return result.rows[0];
     } catch (error: any) {
-      // Handle SQLite unique constraint violation for email updates
-      if (error.message && error.message.includes('UNIQUE constraint failed: users.email')) {
+      // Handle PostgreSQL unique constraint violation for email updates
+      if (error.code === '23505' && error.constraint === 'users_email_key') {
         throw new Error('A user with this email already exists');
       }
       // Handle other database errors
-      if (error.message && error.message.includes('SQLITE_CONSTRAINT')) {
+      if (error.code === '23514') {
         throw new Error('Update failed due to data validation error');
       }
       // Re-throw other errors
