@@ -6,6 +6,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "nodemon --watch 'src/**/*.ts' --exec \"ts-node\" src/server.ts",
+    "seed-data": "ts-node src/scripts/seedData.ts",
+    "create-tables": "ts-node src/scripts/createTables.ts",
     "lint": "eslint 'src/**/*.ts'"
   },
   "keywords": [],
@@ -19,7 +21,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
     "@types/pg": "^8.15.5",
-    "@types/sqlite3": "^3.1.11",
+
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -31,9 +33,11 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pg": "^8.16.3",
-    "sqlite3": "^5.1.7"
+
+    "yahoo-finance2": "^2.13.3"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/dotenv": "^6.1.1",

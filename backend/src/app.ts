@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import passport from 'passport';
 import cookieParser from 'cookie-parser';
-import itemRoutes from './routes/itemRoutes';
 import authRoutes from './routes/authRoutes';
+import companyRoutes from './routes/companyRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import './config/passport';
 
@@ -21,7 +21,7 @@ app.use(passport.initialize());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/items', itemRoutes);
+app.use('/api/companies', companyRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
