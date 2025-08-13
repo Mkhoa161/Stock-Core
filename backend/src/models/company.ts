@@ -69,27 +69,4 @@ export interface CreateDailySummaryInput {
   volume: number;
 }
 
-// Yahoo Finance API response interfaces
-export interface YahooFinanceQuote {
-  symbol: string;
-  regularMarketPrice: number;
-  regularMarketChange: number;
-  regularMarketChangePercent: number;
-  regularMarketVolume: number;
-  marketCap: number;
-  shortName?: string;
-  longName?: string;
-}
 
-export interface YahooFinanceChartData {
-  timestamp: number[];
-  indicators: {
-    quote: Array<{
-      open: number[];
-      high: number[];
-      low: number[];
-      close: number[];
-      volume: number[];
-    }>;
-  };
-}

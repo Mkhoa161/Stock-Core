@@ -140,15 +140,15 @@ router.post('/:ticker/summary', authenticateToken, async (req: AuthenticatedRequ
   }
 });
 
-// Update company data from Yahoo Finance
-router.post('/:ticker/update-from-yahoo', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+// Update company data from Alpha Vantage API
+router.post('/:ticker/update-from-api', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { ticker } = req.params;
     if (!ticker) {
       return res.status(400).json({ message: 'Ticker is required' });
     }
     
-    const success = await companyService.updateCompanyDataFromYahoo(ticker);
+    const success = await companyService.updateCompanyDataFromAPI(ticker);
     
     if (success) {
       res.json({ message: `Successfully updated data for ${ticker}` });

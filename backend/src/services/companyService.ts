@@ -1,8 +1,14 @@
 import dbInterface from '../config/database';
 import { Company, StockPrice, DailySummary, CompanyWithLatestData, CreateCompanyInput, CreateStockPriceInput, CreateDailySummaryInput } from '../models/company';
-import { yahooFinanceService } from './yahooFinanceService';
+
 
 export class CompanyService {
+  async getAllCompanies(): Promise<Company[]> {
+    const query = 'SELECT * FROM companies ORDER BY ticker';
+    const result = await dbInterface.query(query);
+    return result.rows;
+  }
+
   async getAllCompaniesWithLatestData(): Promise<CompanyWithLatestData[]> {
     const query = `
       SELECT 
@@ -53,6 +59,19 @@ export class CompanyService {
       JOIN companies c ON sp.company_id = c.id
       WHERE c.ticker = $1
       ORDER BY sp.date DESC
+      LIMIT $2
+    `;
+    const result = await dbInterface.query(query, [ticker.toUpperCase(), days]);
+    return result.rows;
+  }
+
+  async getDailySummaries(ticker: string, days: number = 30): Promise<DailySummary[]> {
+    const query = `
+      SELECT ds.*
+      FROM daily_summaries ds
+      JOIN companies c ON ds.company_id = c.id
+      WHERE c.ticker = $1
+      ORDER BY ds.date DESC
       LIMIT $2
     `;
     const result = await dbInterface.query(query, [ticker.toUpperCase(), days]);
@@ -125,24 +144,28 @@ export class CompanyService {
   }
 
   /**
-   * Fetch and store latest data from Yahoo Finance
+   * Fetch and store latest data from Alpha Vantage API
    */
-  async updateCompanyDataFromYahoo(ticker: string): Promise<boolean> {
+  async updateCompanyDataFromAPI(ticker: string): Promise<boolean> {
     try {
+      // Import FMP service
+      const { fmpService } = await import('./fmpService.js');
+      
       // Get company from database
       let company = await this.getCompanyByTicker(ticker);
       if (!company) {
-        // Try to create company from Yahoo Finance data
-        const quote = await yahooFinanceService.getQuote(ticker);
-        if (!quote) {
-          throw new Error(`Company not found and could not fetch from Yahoo Finance: ${ticker}`);
+        // Try to create company from FMP data
+        const combinedData = await fmpService.getCombinedCompanyData([ticker]);
+        const companyData = combinedData[0];
+        if (!companyData) {
+          throw new Error(`Company not found and could not fetch from FMP: ${ticker}`);
         }
         
         company = await this.createCompany({
-          ticker: quote.symbol,
-          name: quote.companyName || ticker,
-          sector: '',
-          industry: ''
+          ticker: companyData.symbol,
+          name: companyData.companyName,
+          sector: companyData.sector,
+          industry: companyData.industry
         });
       }
 
@@ -153,14 +176,16 @@ export class CompanyService {
       // At this point, company is guaranteed to be non-null
       const companyId = company.id;
 
-      // Get latest quote from Yahoo Finance
-      const quote = await yahooFinanceService.getQuote(ticker);
-      if (!quote) {
-        throw new Error(`Could not fetch quote for ${ticker}`);
+      // Get latest combined data from FMP
+      const combinedData = await fmpService.getCombinedCompanyData([ticker]);
+      const companyData = combinedData[0];
+      if (!companyData) {
+        throw new Error(`Could not fetch data for ${ticker}`);
       }
 
       // Get historical data for the last 30 days
-      const chartData = await yahooFinanceService.getChartData(ticker, 30);
+      const historicalData = await fmpService.getBulkHistoricalData([ticker], 30);
+      const chartData = historicalData[ticker];
       if (!chartData || chartData.length === 0) {
         throw new Error(`Could not fetch chart data for ${ticker}`);
       }
@@ -170,7 +195,7 @@ export class CompanyService {
         const dayData = chartData[i];
         if (!dayData) continue;
         
-        const date = new Date(dayData.timestamp);
+        const date = new Date(dayData.date);
         const open = dayData.open;
         const high = dayData.high;
         const low = dayData.low;
@@ -187,7 +212,7 @@ export class CompanyService {
             low_price: low,
             close_price: close,
             volume,
-            market_cap: quote.marketCap
+            market_cap: companyData.marketCap || 0
           });
 
           // Calculate day change if we have previous day data
@@ -203,7 +228,7 @@ export class CompanyService {
               price: close,
               day_change: parseFloat(dayChange.toFixed(2)),
               day_change_percent: parseFloat(dayChangePercent.toFixed(2)),
-              market_cap: quote.marketCap,
+              market_cap: companyData.marketCap || 0,
               volume
             });
           }

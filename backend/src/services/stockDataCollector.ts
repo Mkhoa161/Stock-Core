@@ -1,5 +1,5 @@
 import { companyService } from './companyService';
-import { yahooFinanceService } from './yahooFinanceService';
+
 
 export interface CollectionResult {
   success: boolean;
@@ -34,48 +34,28 @@ export class StockDataCollector {
     try {
       console.log('🔍 Discovering companies dynamically...');
       
+      // Import FMP service
+      const { fmpService } = await import('./fmpService.js');
+      
       const discoveredCompanies: CompanyToProcess[] = [];
       
-      // 1. Get top US companies by market cap (tier 1)
-      console.log('🇺🇸 Discovering top US companies...');
-      const topUSCompanies = await yahooFinanceService.getTopCompaniesByMarketCap(limit);
-      discoveredCompanies.push(...topUSCompanies.map(company => ({
-        ticker: company.symbol,
-        name: company.name,
-        sector: '', // Will be filled by Yahoo Finance when collecting data
+      // Use predefined S&P 500 companies for efficiency
+      console.log('🏆 Using predefined S&P 500 companies...');
+      const sp500Symbols = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'BRK.A', 'UNH', 'JNJ',
+        'V', 'PG', 'HD', 'MA', 'DIS', 'PYPL', 'BAC', 'ADBE', 'CRM', 'NFLX'
+      ];
+      const selectedSymbols = sp500Symbols.slice(0, limit);
+      
+      discoveredCompanies.push(...selectedSymbols.map(ticker => ({
+        ticker,
+        name: ticker, // Will be updated with real name from FMP
+        sector: '',
         industry: ''
       })));
       
-      // 2. Get companies by major sectors (tier 2 approach)
-      console.log('🏭 Discovering companies by sectors...');
-      const sectors = ['Technology', 'Healthcare', 'Financial Services', 'Consumer Cyclical', 'Energy'];
-      
-      for (const sector of sectors) {
-        try {
-          const sectorCompanies = await yahooFinanceService.getCompaniesBySector(sector);
-          const sectorCompanyData = sectorCompanies
-            .slice(0, Math.floor(limit / sectors.length)) // Distribute limit across sectors
-            .map(company => ({
-              ticker: company.symbol,
-              name: company.name,
-              sector: sector,
-              industry: ''
-            }));
-          
-          discoveredCompanies.push(...sectorCompanyData);
-          
-          // Add delay to avoid rate limiting
-          await this.delay(500);
-        } catch (error) {
-          console.warn(`Failed to discover companies for sector ${sector}:`, error);
-        }
-      }
-      
-      // Deduplicate and limit results
-      const uniqueCompanies = this.deduplicateCompanies(discoveredCompanies).slice(0, limit);
-      
-      console.log(`✅ Discovered ${uniqueCompanies.length} unique companies`);
-      return uniqueCompanies;
+      console.log(`✅ Discovered ${discoveredCompanies.length} companies`);
+      return discoveredCompanies;
       
     } catch (error) {
       console.error('❌ Company discovery failed, using fallback companies:', error);
@@ -269,10 +249,14 @@ export class StockDataCollector {
    */
   private async collectStockDataForCompany(ticker: string): Promise<boolean> {
     try {
-      // Get current quote from Yahoo Finance
-      const quote = await yahooFinanceService.getQuote(ticker);
-      if (!quote) {
-        console.warn(`⚠️ No quote data available for ${ticker}`);
+      // Import FMP service
+      const { fmpService } = await import('./fmpService.js');
+      
+      // Get combined company data from FMP
+      const combinedData = await fmpService.getCombinedCompanyData([ticker]);
+      const companyData = combinedData[0];
+      if (!companyData) {
+        console.warn(`⚠️ No data available for ${ticker}`);
         return false;
       }
 
@@ -281,10 +265,10 @@ export class StockDataCollector {
       if (!company) {
         console.log(`🏢 Creating new company: ${ticker}`);
         company = await companyService.createCompany({
-          ticker: quote.symbol,
-          name: quote.companyName || ticker,
-          sector: '',
-          industry: ''
+          ticker: companyData.symbol,
+          name: companyData.companyName,
+          sector: companyData.sector,
+          industry: companyData.industry
         });
       }
 
@@ -293,7 +277,8 @@ export class StockDataCollector {
       }
 
       // Get historical chart data for the last 30 days
-      const chartData = await yahooFinanceService.getChartData(ticker, 30);
+      const historicalData = await fmpService.getBulkHistoricalData([ticker], 30);
+      const chartData = historicalData[ticker];
       if (!chartData || chartData.length === 0) {
         console.warn(`⚠️ No chart data available for ${ticker}`);
         return false;
@@ -306,7 +291,7 @@ export class StockDataCollector {
         const dayData = chartData[i];
         if (!dayData) continue;
 
-        const date = new Date(dayData.timestamp);
+        const date = new Date(dayData.date);
         const open = dayData.open;
         const high = dayData.high;
         const low = dayData.low;
@@ -324,7 +309,7 @@ export class StockDataCollector {
               low_price: low,
               close_price: close,
               volume,
-              market_cap: quote.marketCap
+              market_cap: companyData.marketCap || 0
             });
 
             // Create daily summary if we have previous day's data
@@ -339,7 +324,7 @@ export class StockDataCollector {
                 price: close,
                 day_change: parseFloat(dayChange.toFixed(2)),
                 day_change_percent: parseFloat(dayChangePercent.toFixed(2)),
-                market_cap: quote.marketCap,
+                market_cap: companyData.marketCap || 0,
                 volume
               });
             }

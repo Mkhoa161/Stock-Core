@@ -7,7 +7,7 @@ import { stockDataCollector } from '../services/stockDataCollector';
  * 
  * What this Lambda does:
  * 1. Gets all companies from our RDS database
- * 2. For each company, fetches current stock data from Yahoo Finance
+ * 2. For each company, fetches current stock data from Alpha Vantage API
  * 3. Stores the data in our RDS database (stock_prices and daily_summaries tables)
  * 4. Returns a summary of what was processed
  */
