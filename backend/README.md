@@ -1,153 +1,233 @@
-# Stock Insight Backend API
+# Stock Insight Backend
 
-A robust Node.js/Express backend with comprehensive authentication system, supporting username/password login, JWT tokens, Google OAuth, and dual authentication schemes.
+A Node.js/TypeScript backend for a stock market dashboard application using lazy loading for historical data.
 
-## Features
+## 🎯 Current Strategy: Lazy Loading
 
-- **Authentication**: Username/password with bcrypt password hashing
-- **JWT Tokens**: Secure token-based authentication with 24-hour expiration
-- **Dual Authentication**: Supports both Bearer tokens and HTTP-only cookies
-- **Google OAuth**: Complete Google OAuth integration with automatic user creation/linking
-- **Database**: PostgreSQL
-- **Security**: CSRF protection, input validation, secure error handling
-- **Testing**: Comprehensive Bruno API test suite (16 test cases)
-- **Error Handling**: User-friendly error messages with proper HTTP status codes
+We use a **lazy loading strategy** for historical data to efficiently manage API limits and provide optimal user experience:
 
-## Quick Start
+### How It Works:
+1. **Frontend requests** historical data for a specific company
+2. **Backend checks database** first - do we have the data cached?
+3. **If cached**: Return immediately (fast!)
+4. **If not cached**: Fetch from FMP API, cache it, then return
+5. **Next request**: Served from cache instantly
 
-### Prerequisites
+### Benefits:
+- ✅ **API Efficient**: Only fetch data users actually need
+- ✅ **Cost Effective**: Stay within 250 daily FMP API limit
+- ✅ **Fast**: Popular companies load instantly
+- ✅ **Scalable**: Cache grows with user demand
 
-- Node.js (v16 or higher)
-- npm or yarn
+## 🏗️ Architecture
 
-### Installation
+### Services:
+- **`fmpService.ts`**: Financial Modeling Prep API integration
+- **`companyService.ts`**: Database operations for companies
+- **`historicalDataService.ts`**: Lazy loading historical data service
+- **`authService.ts`**: Authentication logic
+- **`userService.ts`**: User management
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd backend
+### Scripts:
+- **`scrapeSP500.ts`**: Scrapes S&P 500 companies from Wikipedia
+- **`testLambda.ts`**: Tests Lambda automation
+- **`testLambdaSimple.ts`**: Tests Lambda components
 
-# Install dependencies
-npm install
+## 🚀 Getting Started
 
-# Create .env file
-cp .env.example .env
-# Edit .env with your configuration
+### Prerequisites:
+- Node.js 18+
+- PostgreSQL database
+- FMP API key
 
-# Start development server
-npm run dev
-```
-
-### Environment Variables
-
-Create a `.env` file in the backend directory:
-
+### Environment Variables:
 ```env
-# Server Configuration
-NODE_ENV=development
-PORT=3000
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-here
-
-# Google OAuth (Optional - for Google login)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
-FRONTEND_URL=http://localhost:3001
-
-# Database (for production)
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=stock_insight
-DB_USER=postgres
-DB_PASSWORD=your_password
+DATABASE_URL=postgresql://user:password@localhost:5432/stock_insight
+FMP_API_KEY=your_fmp_api_key_here
+JWT_SECRET=your_jwt_secret_here
 ```
 
-## API Endpoints
-
-### Authentication Routes
-
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - Login with email/password (supports both methods)
-- `POST /api/auth/logout` - Logout (clears cookies, advises Bearer cleanup)
-- `GET /api/auth/profile` - Get current user profile (protected)
-- `PUT /api/auth/profile` - Update user profile (protected)
-- `GET /api/auth/google` - Redirect to Google OAuth
-- `GET /api/auth/google/callback` - Google OAuth callback
-
-### Protected Routes
-
-To protect a route, use the `authenticateToken` middleware:
-
-```typescript
-import { authenticateToken } from '../middlewares/authMiddleware';
-
-router.get('/protected-route', authenticateToken, (req, res) => {
-  // Access user data via req.user
-  res.json({ message: 'Protected route', user: req.user });
-});
-```
-
-## Google OAuth Setup
-
-### 1. Google Cloud Console Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the Google+ API
-4. Go to Credentials → Create Credentials → OAuth 2.0 Client IDs
-5. Set the authorized redirect URI to: `http://localhost:3000/api/auth/google/callback`
-6. Copy the Client ID and Client Secret to your `.env` file
-
-### 2. Testing Google OAuth
-
-**Manual Testing:**
-1. Start your server: `npm run dev`
-2. Visit `http://localhost:3000/api/auth/google` in your browser
-3. Complete Google authentication
-4. You'll be redirected to your frontend with a token
-
-**Frontend Integration:**
-```javascript
-// Simple redirect approach
-const handleGoogleLogin = () => {
-  window.location.href = '/api/auth/google';
-};
-
-// Or as a link
-<a href="/api/auth/google">Login with Google</a>
-```
-
-### 3. Google OAuth Flow
-
-1. **User clicks "Login with Google"** → Frontend redirects to `/api/auth/google`
-2. **Server redirects to Google** → Google OAuth page
-3. **User authenticates on Google** → Google redirects to `/api/auth/google/callback`
-4. **Server processes callback** → Creates/updates user, generates JWT
-5. **User is logged in** → Redirected to frontend with token
-6. **Frontend handles errors** → Redirects to login page if authentication fails
-
-**Error Handling:**
-- ✅ **Success**: Redirects to `/auth/success?token=...`
-- ✅ **Failure**: Redirects to `/auth/error?message=authentication_failed`
-- ✅ **Frontend control**: Frontend decides how to handle different error states
-
-## Request/Response Examples
-
-### Registration
-
-**Request:**
+### Installation:
 ```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123!",
-    "username": "johndoe",
-    "firstName": "John",
-    "lastName": "Doe"
-  }'
+npm install
+npm run build
+```
+
+### Database Setup:
+```bash
+npm run scrape:sp500
+```
+
+## 📡 API Endpoints
+
+### Companies (Public - No Authentication Required)
+
+#### `GET /api/companies`
+Get all companies with their latest market data for the dashboard.
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "ticker": "AAPL",
+    "name": "Apple Inc.",
+    "sector": "Technology",
+    "industry": "Consumer Electronics",
+    "latest_price": 175.43,
+    "latest_day_change": 2.15,
+    "latest_day_change_percent": 1.24,
+    "latest_volume": 45678900,
+    "latest_market_cap": 2750000000000,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+**Status Codes:**
+- `200` - Success
+- `500` - Server error
+
+---
+
+#### `GET /api/companies/:ticker`
+Get a specific company by ticker symbol with latest market data.
+
+**Parameters:**
+- `ticker` (path parameter, required): Stock ticker symbol (e.g., "AAPL", "MSFT")
+
+**Response:**
+```json
+{
+  "id": 1,
+  "ticker": "AAPL",
+  "name": "Apple Inc.",
+  "sector": "Technology",
+  "industry": "Consumer Electronics",
+  "latest_price": 175.43,
+  "latest_day_change": 2.15,
+  "latest_day_change_percent": 1.24,
+  "latest_volume": 45678900,
+  "latest_market_cap": 2750000000000,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+**Status Codes:**
+- `200` - Success
+- `400` - Missing ticker parameter
+- `404` - Company not found
+- `500` - Server error
+
+**Example:**
+```bash
+GET /api/companies/AAPL
+```
+
+---
+
+#### `GET /api/companies/:ticker/historical`
+Get historical price data for a company with lazy loading and caching.
+
+**Parameters:**
+- `ticker` (path parameter, required): Stock ticker symbol (e.g., "AAPL", "MSFT")
+- `days` (query parameter, optional): Number of days to fetch (default: 60, max: 60)
+- `from` (query parameter, optional): Start date in YYYY-MM-DD format
+- `to` (query parameter, optional): End date in YYYY-MM-DD format
+
+**Query Parameter Combinations:**
+1. **Days parameter (backward compatible):**
+   ```
+   GET /api/companies/AAPL/historical?days=30
+   ```
+
+2. **Custom date range:**
+   ```
+   GET /api/companies/AAPL/historical?from=2024-01-01&to=2024-01-31
+   ```
+
+3. **Default (60 days):**
+   ```
+   GET /api/companies/AAPL/historical
+   ```
+
+**Response:**
+```json
+{
+  "ticker": "AAPL",
+  "dateRange": {
+    "from": "2024-01-01",
+    "to": "2024-01-31"
+  },
+  "days": 31,
+  "dataPoints": 31,
+  "data": [
+    {
+      "date": "2024-01-31",
+      "open": 175.20,
+      "high": 176.80,
+      "low": 174.50,
+      "close": 175.43,
+      "volume": 45678900
+    }
+  ],
+  "source": "database",
+  "cached": true,
+  "message": "Data retrieved from cache"
+}
+```
+
+**Response Fields:**
+- `ticker`: The requested ticker symbol
+- `dateRange`: Object with `from` and `to` dates (only for custom date ranges)
+- `days`: Number of days in the response
+- `dataPoints`: Number of data points returned
+- `data`: Array of historical price data
+- `source`: Data source ("database" or "api")
+- `cached`: Whether data was served from cache
+- `message`: Human-readable status message
+
+**Historical Data Fields:**
+- `date`: Date in YYYY-MM-DD format
+- `open`: Opening price
+- `high`: Highest price of the day
+- `low`: Lowest price of the day
+- `close`: Closing price
+- `volume`: Trading volume
+
+**Validation Rules:**
+- Date range cannot exceed 2 years (730 days)
+- Start date must be before end date
+- Date format must be YYYY-MM-DD
+- Ticker is required
+
+**Status Codes:**
+- `200` - Success
+- `400` - Invalid parameters (invalid dates, date range too large, etc.)
+- `404` - Company not found or no data available
+- `500` - Server error
+
+**Error Response Example:**
+```json
+{
+  "message": "Invalid date format. Use YYYY-MM-DD"
+}
+```
+
+---
+
+### Authentication (Requires JWT Token)
+
+#### `POST /api/auth/register`
+Register a new user account.
+
+**Request Body (form-data):**
+```
+email: user@example.com
+password: securepassword123
+name: John Doe
 ```
 
 **Response:**
@@ -157,285 +237,152 @@ curl -X POST http://localhost:3000/api/auth/register \
   "user": {
     "id": 1,
     "email": "user@example.com",
-    "username": "johndoe",
-    "firstName": "John",
-    "lastName": "Doe",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  },
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "name": "John Doe",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
 }
 ```
 
-### Login
+**Status Codes:**
+- `201` - User created successfully
+- `400` - Invalid input (missing fields, weak password, invalid email)
+- `409` - Email already exists
+- `500` - Server error
 
-**Request:**
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123!"
-  }'
+---
+
+#### `POST /api/auth/login`
+Authenticate user and receive JWT token.
+
+**Request Body (form-data):**
+```
+email: user@example.com
+password: securepassword123
 ```
 
 **Response:**
 ```json
 {
   "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": 1,
     "email": "user@example.com",
-    "username": "johndoe",
-    "firstName": "John",
-    "lastName": "Doe"
-  },
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "name": "John Doe"
+  }
 }
 ```
 
-### Protected Route Access
+**Status Codes:**
+- `200` - Login successful
+- `400` - Missing email or password
+- `401` - Invalid credentials
+- `500` - Server error
 
-**Request:**
-```bash
-curl -X GET http://localhost:3000/api/auth/profile \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+---
+
+#### `GET /api/auth/profile`
+Get current user's profile information.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
 ```
 
 **Response:**
 ```json
 {
-  "user": {
     "id": 1,
     "email": "user@example.com",
-    "username": "johndoe",
-    "firstName": "John",
-    "lastName": "Doe",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
+  "name": "John Doe",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
 }
 ```
 
-## Error Handling
+**Status Codes:**
+- `200` - Success
+- `401` - Invalid or missing token
+- `404` - User not found
+- `500` - Server error
 
-The API provides user-friendly error messages with appropriate HTTP status codes:
+## 🧪 Testing
 
-- **400 Bad Request**: Invalid input data (email format, password strength)
-- **401 Unauthorized**: Invalid credentials or missing token
-- **409 Conflict**: Email already exists during registration
-- **500 Internal Server Error**: Server-side errors
+### API Testing (Bruno):
+All API endpoints are tested using Bruno test files in the `bruno-stock-insight-api/` directory.
 
-**Example Error Response:**
-```json
-{
-  "message": "A user with this email already exists"
-}
-```
-
-## Testing
-
-### Bruno Test Suite
-
-The project includes a comprehensive Bruno test suite with 16 test cases covering:
-
-- Health check endpoint
-- User registration (valid, invalid email, weak password, missing fields, duplicate)
-- User login (valid, invalid email, wrong password, missing fields)
-- Profile management (with/without/invalid tokens)
-- Profile updates
-- Logout functionality
-- Post-logout verification
-
-**Running Tests:**
-1. Install Bruno: `npm install -g @usebruno/cli`
-2. Open Bruno and import the `bruno-stock-insight-api` collection
-3. Set the environment variables in Bruno
-4. Run the test suite
-
-### Manual Testing
-
-**Test Registration:**
+### Lambda Testing:
 ```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "password": "TestPass123!"}'
+npm run test:lambda
+npm run test:lambda:simple
 ```
 
-**Test Login:**
+### Database Testing:
 ```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "password": "TestPass123!"}'
+npm test
 ```
 
-## Development
+## 📊 Data Flow
 
-### Project Structure
+1. **Initial Setup**: Scrape S&P 500 companies → Database
+2. **Lambda Automation**: AWS Lambda runs every 24 hours:
+   - Scrapes S&P 500 companies (adds new ones)
+   - Updates company profiles (fills missing sector/industry)
+   - Collects current market data (price, dayChange, marketCap) for dashboard
+   - Collects historical data (uses remaining API calls)
+3. **User Request**: Frontend requests historical data
+4. **Lazy Loading**: Check cache → Fetch from API if needed → Cache → Return
+5. **Subsequent Requests**: Serve from cache (instant)
 
+## 🔧 Development
+
+### Available Scripts:
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run scrape:sp500` - Load S&P 500 companies
+- `npm run test:lambda` - Test Lambda automation
+- `npm run test:lambda:simple` - Test Lambda components
+
+### Code Structure:
 ```
-backend/
-├── src/
-│   ├── config/
-│   │   ├── config.ts          # Configuration management
-│   │   ├── database.ts         # Database connection (PostgreSQL)
-│   │   └── passport.ts         # Passport.js strategies
-│   ├── controllers/
-│   │   └── itemController.ts   # Item-related controllers
-│   ├── middlewares/
-│   │   ├── authMiddleware.ts   # Authentication middleware
-│   │   └── errorHandler.ts     # Global error handling
-│   ├── models/
-│   │   └── user.ts            # User data interfaces
-│   ├── routes/
-│   │   ├── authRoutes.ts      # Authentication routes
-│   │   └── itemRoutes.ts      # Item routes
-│   ├── services/
-│   │   ├── authService.ts     # JWT operations
-│   │   └── userService.ts     # User database operations
-│   ├── utils/
-│   │   └── authUtils.ts       # Authentication utilities
-│   ├── app.ts                 # Express app setup
-│   └── server.ts              # Server entry point
-├── bruno-stock-insight-api/   # Bruno test collection
-├── package.json
-└── tsconfig.json
-```
-
-### Available Scripts
-
-```bash
-npm run dev          # Start development server with hot reload
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
+src/
+├── services/          # Business logic
+├── routes/           # API endpoints
+├── scripts/          # Utility scripts
+├── tests/            # Test files
+├── middlewares/      # Express middlewares
+├── config/           # Configuration
+└── models/           # TypeScript interfaces
 ```
 
-## Security Features
+## 🎯 Key Features
 
-- **Password Hashing**: bcrypt with 12 salt rounds
-- **JWT Security**: 24-hour expiration, secure secret
-- **Input Validation**: Email format, password strength validation
-- **CSRF Protection**: State parameter in Google OAuth
-- **Error Sanitization**: User-friendly error messages
-- **Dual Authentication**: Bearer tokens and HTTP-only cookies
-- **CORS Configuration**: Proper CORS setup for frontend integration
+- **Lazy Loading**: Historical data fetched on-demand
+- **Caching**: Automatic caching of fetched data
+- **API Efficiency**: Minimal API calls, maximum data usage
+- **Scalable**: Grows with user demand
+- **TypeScript**: Full type safety
+- **PostgreSQL**: Reliable data storage
 
-## Production Deployment (Amazon RDS)
+## 📈 Performance
 
-### Prerequisites
+- **First Request**: ~2-3 seconds (API fetch + cache)
+- **Cached Request**: ~50ms (database query)
+- **API Usage**: Only when needed, stays within limits
+- **Storage**: Efficient 60-day historical data limit
 
-1. **Amazon RDS PostgreSQL Instance**
-   - Create a PostgreSQL RDS instance
-   - Note down: host, port, database name, username, password
-   - Ensure security groups allow connections from your EC2 instance
+## 🔒 Security
 
-2. **Environment Variables**
-   ```env
-   NODE_ENV=production
-   DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
-   DB_PORT=5432
-   DB_NAME=stock_insight
-   DB_USER=your_username
-   DB_PASSWORD=your_password
-   ```
+- **JWT Authentication**: For user management (register/login/profile)
+- **Lambda Automation**: All data collection handled by AWS Lambda
+- **Lazy Loading**: Historical data fetched on-demand, no manual intervention needed
+- **Environment Variables**: Secure configuration management
+- **Input Validation**: Comprehensive input sanitization
+- **SQL Injection Protection**: Parameterized queries
 
-### Database Setup
+## 📝 Notes
 
-#### Option 1: Automatic Table Creation (Recommended)
-Tables are automatically created when the application starts:
-
-```bash
-# Set environment variables
-export NODE_ENV=production
-export DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
-export DB_PORT=5432
-export DB_NAME=stock_insight
-export DB_USER=your_username
-export DB_PASSWORD=your_password
-
-# Start the application (tables will be created automatically)
-npm start
-```
-
-#### Option 2: Manual Table Creation
-If you prefer to create tables manually:
-
-```bash
-# Set environment variables first
-export NODE_ENV=production
-export DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
-export DB_PORT=5432
-export DB_NAME=stock_insight
-export DB_USER=your_username
-export DB_PASSWORD=your_password
-
-# Create tables manually
-npm run create-tables
-```
-
-### Database Schema
-
-#### Tables Created
-
-1. **users** - User authentication and profiles
-2. **companies** - Company information (ticker, name, sector, industry)
-3. **stock_prices** - Daily OHLC price data for candlestick charts
-4. **daily_summaries** - Aggregated daily data for dashboard
-
-#### Indexes Created
-
-- `idx_companies_ticker` - Fast company lookup by ticker
-- `idx_stock_prices_company_date` - Fast price data retrieval
-- `idx_daily_summaries_company_date` - Fast summary data retrieval
-- `idx_stock_prices_date` - Date-based queries
-- `idx_daily_summaries_date` - Date-based queries
-
-### Deployment Steps
-
-1. **Build the application**
-   ```bash
-   npm run build
-   ```
-
-2. **Set environment variables**
-   ```bash
-   export NODE_ENV=production
-   export DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
-   export DB_PORT=5432
-   export DB_NAME=stock_insight
-   export DB_USER=your_username
-   export DB_PASSWORD=your_password
-   ```
-
-3. **Start the application**
-   ```bash
-   npm start
-   ```
-
-### Troubleshooting
-
-#### Connection Issues
-- Verify RDS security groups allow connections from your EC2 instance
-- Check that environment variables are set correctly
-- Ensure RDS instance is running and accessible
-
-#### Table Creation Issues
-- Verify database user has CREATE TABLE permissions
-- Check database logs for any errors
-- Run `npm run create-tables` manually if automatic creation fails
-
-#### Performance Issues
-- Monitor RDS performance metrics
-- Consider adding more indexes based on query patterns
-- Optimize queries for large datasets
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License. 
+- Historical data is limited to 60 days to manage storage
+- Cache automatically grows based on user behavior
+- API calls are minimized through intelligent caching
+- System is designed to stay within FMP's 250 daily call limit 

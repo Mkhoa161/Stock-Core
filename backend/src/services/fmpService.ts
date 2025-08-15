@@ -22,7 +22,6 @@ export interface FMPHistoricalData {
   low: number;
   close: number;
   volume: number;
-  adjClose: number;
 }
 
 export interface FMPCompanyProfile {
@@ -102,8 +101,16 @@ export class FMPService {
   /**
    * Get historical data for multiple symbols (one API call per symbol)
    * @param symbols Array of stock symbols
+   * @param days Number of days to fetch (default: 60 for 2 months)
+   * @param fromDate Optional start date (YYYY-MM-DD format)
+   * @param toDate Optional end date (YYYY-MM-DD format)
    */
-  async getBulkHistoricalData(symbols: string[], days: number = 30): Promise<Record<string, FMPHistoricalData[]>> {
+  async getBulkHistoricalData(
+    symbols: string[], 
+    days: number = 60,
+    fromDate?: string,
+    toDate?: string
+  ): Promise<Record<string, FMPHistoricalData[]>> {
     try {
       if (!this.apiKey) {
         console.error('❌ FMP API key not configured');
@@ -124,21 +131,32 @@ export class FMPService {
           this.requestCount++;
           console.log(`📈 API request #${this.requestCount}/${this.DAILY_LIMIT}`);
           
-          const response = await axios.get(`${this.BASE_URL}/historical-price-full/${symbol}?apikey=${this.apiKey}`);
+          // Build URL with optional date parameters
+          let url = `${this.BASE_URL}/historical-price-full/${symbol}?apikey=${this.apiKey}`;
+          if (fromDate) {
+            url += `&from=${fromDate}`;
+          }
+          if (toDate) {
+            url += `&to=${toDate}`;
+          }
+          
+          const response = await axios.get(url);
           const data = response.data;
           
           if (data && data.historical && Array.isArray(data.historical)) {
-            const historical = data.historical
-              .slice(0, days)
-              .map((day: any) => ({
-                date: day.date,
-                open: day.open || 0,
-                high: day.high || 0,
-                low: day.low || 0,
-                close: day.close || 0,
-                volume: day.volume || 0,
-                adjClose: day.adjClose || 0
-              }));
+                         let historical = data.historical.map((day: any) => ({
+               date: day.date,
+               open: day.open || 0,
+               high: day.high || 0,
+               low: day.low || 0,
+               close: day.close || 0,
+               volume: day.volume || 0
+             }));
+            
+            // If no date range specified, limit to requested days
+            if (!fromDate && !toDate) {
+              historical = historical.slice(0, days);
+            }
             
             result[symbol] = historical;
             
@@ -216,51 +234,9 @@ export class FMPService {
     }
   }
 
-  /**
-   * Get all data for S&P 500 companies efficiently
-   * Uses profile endpoint for company details and quote endpoint for real-time market data
-   */
-  async getAllSP500Data(symbols: string[]): Promise<{
-    quotes: FMPQuote[];
-    profiles: FMPCompanyProfile[];
-    historicalData: Record<string, FMPHistoricalData[]>;
-  }> {
-    console.log(`🚀 Fetching all data for ${symbols.length} S&P 500 companies...`);
-    
-    const quotes: FMPQuote[] = [];
-    const profiles: FMPCompanyProfile[] = [];
-    const historicalData: Record<string, FMPHistoricalData[]> = {};
-    
-    // Process symbols in batches
-    const batchSize = 10;
-    for (let i = 0; i < symbols.length; i += batchSize) {
-      const batch = symbols.slice(i, i + batchSize);
-      
-      console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(symbols.length / batchSize)}`);
-      
-      // Get company profiles for this batch (contains company details + some market data)
-      const batchProfiles = await this.getBulkCompanyProfiles(batch);
-      profiles.push(...batchProfiles);
-      
-      // Get quotes for this batch (contains real-time market data)
-      const batchQuotes = await this.getBulkQuotes(batch);
-      quotes.push(...batchQuotes);
-      
-      // Get historical data for this batch (one call per symbol)
-      const batchHistorical = await this.getBulkHistoricalData(batch);
-      Object.assign(historicalData, batchHistorical);
-      
-      // Add delay between batches to be safe
-      if (i + batchSize < symbols.length) {
-        await this.delay(1000);
-      }
-    }
-    
-    console.log(`🎉 Completed fetching data for ${symbols.length} companies`);
-    console.log(`📊 Total API calls used: ${this.requestCount}/${this.DAILY_LIMIT}`);
-    
-    return { quotes, profiles, historicalData };
-  }
+
+
+
 
   /**
    * Get combined company data efficiently

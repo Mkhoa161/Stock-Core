@@ -33,8 +33,17 @@ async function scrapeSP500Companies(): Promise<SP500Company[]> {
         
         // Only add if we have a valid ticker and name
         if (ticker && name && ticker.length <= 10) {
+          // Convert dots to hyphens for FMP compatibility (e.g., BF.B -> BF-B)
+          const originalTicker = ticker.toUpperCase();
+          const fmpTicker = originalTicker.replace(/\./g, '-');
+          
+          // Log ticker conversions for transparency
+          if (originalTicker !== fmpTicker) {
+            console.log(`🔄 Converting ticker: ${originalTicker} → ${fmpTicker}`);
+          }
+          
           companies.push({
-            ticker: ticker.toUpperCase(),
+            ticker: fmpTicker,
             name
           });
         }
