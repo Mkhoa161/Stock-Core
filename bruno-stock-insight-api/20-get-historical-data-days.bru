@@ -1,0 +1,81 @@
+meta {
+  name: Get Historical Data (Days Parameter)
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/companies/AAPL/historical?days=30
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Get Historical Data (Days Parameter)
+  description: |
+    Test getting historical data using the days parameter (backward compatibility).
+    
+    This endpoint should return:
+    - Historical data for the last 30 days
+    - OHLCV data (open, high, low, close, volume)
+    - Metadata about the source (database/API) and caching
+}
+
+tests {
+  // Check if response is successful
+  test("should return 200 status", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  // Check if response has required fields
+  test("should have required response fields", function() {
+    expect(res.body).to.have.property('ticker');
+    expect(res.body).to.have.property('days');
+    expect(res.body).to.have.property('dataPoints');
+    expect(res.body).to.have.property('data');
+    expect(res.body).to.have.property('source');
+    expect(res.body).to.have.property('cached');
+    expect(res.body).to.have.property('message');
+  });
+
+  // Check if ticker is correct
+  test("should return correct ticker", function() {
+    expect(res.body.ticker).to.equal('AAPL');
+  });
+
+  // Check if days parameter is respected
+  test("should return requested number of days", function() {
+    expect(Number(res.body.days)).to.equal(30);
+  });
+
+  // Check if data is an array
+  test("data should be an array", function() {
+    expect(res.body.data).to.be.an('array');
+  });
+
+  // Check if data points match requested days
+  test("data points should match requested days", function() {
+    expect(Number(res.body.dataPoints)).to.be.at.most(30);
+  });
+
+  // Check if historical data has required fields
+  test("historical data should have OHLCV fields", function() {
+    if (res.body.data.length > 0) {
+      const dataPoint = res.body.data[0];
+      expect(dataPoint).to.have.property('date');
+      expect(dataPoint).to.have.property('open');
+      expect(dataPoint).to.have.property('high');
+      expect(dataPoint).to.have.property('low');
+      expect(dataPoint).to.have.property('close');
+      expect(dataPoint).to.have.property('volume');
+    }
+  });
+
+  // Check if source is valid
+  test("source should be valid", function() {
+    expect(['database', 'api']).to.include(res.body.source);
+  });
+}

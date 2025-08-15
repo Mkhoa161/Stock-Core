@@ -1,0 +1,40 @@
+meta {
+  name: Get Historical Data (Missing Ticker)
+  type: http
+  seq: 25
+}
+
+get {
+  url: {{baseUrl}}/api/companies/historical
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  // Check if response is 400
+  test("should return 400 status", function() {
+    expect(res.status).to.equal(400);
+  });
+  
+  // Check if response has error message
+  test("should return error message", function() {
+    expect(res.body).to.have.property('message');
+    expect(res.body.message).to.include('Ticker is required');
+  });
+  
+  
+}
+
+docs {
+  name: Get Historical Data (Missing Ticker)
+  description: |
+    Test getting historical data with missing ticker parameter.
+    
+    This endpoint should return:
+    - 400 status code for missing ticker
+    - Error message indicating ticker is required
+}

@@ -1,0 +1,39 @@
+meta {
+  name: Get Company Not Found
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{baseUrl}}/api/companies/INVALID
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Get Company Not Found
+  description: |
+    Test getting a company that doesn't exist in the database.
+    
+    This endpoint should return:
+    - 404 status code
+    - Error message indicating company not found
+}
+
+tests {
+  // Check if response is 404
+  test("should return 404 status", function() {
+    expect(res.status).to.equal(404);
+  });
+
+  // Check if response has error message
+  test("should return error message", function() {
+    expect(res.body).to.have.property('message');
+    expect(res.body.message).to.include('not found');
+  });
+
+
+}
