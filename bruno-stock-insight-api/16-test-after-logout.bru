@@ -1,0 +1,37 @@
+meta {
+  name: Test After Logout
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/auth/profile
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  title: Test After Logout
+  description: |
+    Test that profile access fails after logout.
+    
+    This test:
+    - Uses the same token that was used before logout
+    - Should fail because the token cookie was cleared
+    - Demonstrates that logout works correctly
+    
+    **Note:** This test should be run after the logout test to verify logout effectiveness.
+    
+  examples: |
+    **Expected Response (401):**
+    ```json
+    {
+      "message": "Access token required"
+    }
+    ```
+    
+    **Note:** This test may pass or fail depending on how the client handles the cleared cookie.
+} 

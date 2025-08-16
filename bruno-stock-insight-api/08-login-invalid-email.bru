@@ -1,0 +1,38 @@
+meta {
+  name: Login Invalid Email
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "nonexistent@example.com",
+    "password": "TestPass123"
+  }
+}
+
+docs {
+  title: Login Invalid Email
+  description: |
+    Test login with email that doesn't exist.
+    
+    This test should fail because:
+    - Email doesn't exist in database
+    
+  examples: |
+    **Expected Response (401):**
+    ```json
+    {
+      "message": "Invalid credentials"
+    }
+    ```
+} 

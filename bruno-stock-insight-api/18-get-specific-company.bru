@@ -1,0 +1,68 @@
+meta {
+  name: Get Specific Company
+  type: http
+  seq: 18
+}
+
+get {
+  url: {{baseUrl}}/api/companies/AAPL
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Get Specific Company
+  description: |
+    Test getting a specific company by ticker symbol.
+    
+    This endpoint should return:
+    - Company details (name, ticker, sector, industry)
+    - Latest market data (price, change, volume, market cap)
+    - All data for the specified ticker
+}
+
+tests {
+  // Check if response is successful
+  test("should return 200 status", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  // Check if response is an object
+  test("should return company object", function() {
+    expect(res.body).to.be.an('object');
+  });
+
+  // Check if company has correct ticker
+  test("should return correct ticker", function() {
+    expect(res.body.ticker).to.equal('AAPL');
+  });
+
+  // Check if company has required fields
+  test("company should have required fields", function() {
+    expect(res.body).to.have.property('id');
+    expect(res.body).to.have.property('ticker');
+    expect(res.body).to.have.property('name');
+    expect(res.body).to.have.property('sector');
+    expect(res.body).to.have.property('industry');
+  });
+
+  // Check if company has market data fields
+  test("company should have market data fields", function() {
+    expect(res.body).to.have.property('latest_price');
+    expect(res.body).to.have.property('latest_day_change');
+    expect(res.body).to.have.property('latest_day_change_percent');
+    expect(res.body).to.have.property('latest_volume');
+    expect(res.body).to.have.property('latest_market_cap');
+  });
+
+  // Check if price is a valid number
+  test("latest price should be a valid number", function() {
+    expect(!isNaN(Number(res.body.latest_price))).to.be.true;
+    expect(Number(res.body.latest_price)).to.be.greaterThan(0);
+  });
+
+
+}

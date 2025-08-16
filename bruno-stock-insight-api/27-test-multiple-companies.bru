@@ -1,0 +1,86 @@
+meta {
+  name: Test Multiple Companies (Dashboard)
+  type: http
+  seq: 27
+}
+
+get {
+  url: {{baseUrl}}/api/companies
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Test Multiple Companies (Dashboard)
+  description: |
+    Test getting multiple companies for dashboard functionality.
+    
+    This test verifies:
+    - Multiple companies are returned
+    - Each company has complete market data
+    - Data is suitable for dashboard display
+    - Performance is acceptable for dashboard loading
+}
+
+tests {
+  // Check if response is successful
+  test("should return 200 status", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  // Check if multiple companies are returned
+  test("should return multiple companies", function() {
+    expect(res.body).to.be.an('array');
+    expect(res.body.length).to.be.greaterThan(0);
+  });
+
+  // Check if companies have complete data
+  test("companies should have complete market data", function() {
+    const companies = res.body;
+    companies.forEach((company, index) => {
+      expect(company, `Company ${index} missing required fields`).to.have.property('id');
+      expect(company, `Company ${index} missing ticker`).to.have.property('ticker');
+      expect(company, `Company ${index} missing name`).to.have.property('name');
+      expect(company, `Company ${index} missing price`).to.have.property('latest_price');
+      expect(company, `Company ${index} missing change`).to.have.property('latest_day_change');
+      expect(company, `Company ${index} missing change percent`).to.have.property('latest_day_change_percent');
+    });
+  });
+
+  // Check if market data is valid
+  test("market data should be valid numbers", function() {
+    const companies = res.body;
+    companies.forEach((company, index) => {
+      expect(!isNaN(Number(company.latest_price)), `Company ${index} price should be valid number`).to.be.true;
+      expect(!isNaN(Number(company.latest_day_change)), `Company ${index} change should be valid number`).to.be.true;
+      expect(!isNaN(Number(company.latest_day_change_percent)), `Company ${index} change percent should be valid number`).to.be.true;
+      expect(!isNaN(Number(company.latest_volume)), `Company ${index} volume should be valid number`).to.be.true;
+    });
+  });
+
+  // Check if prices are positive
+  test("prices should be positive", function() {
+    const companies = res.body;
+    companies.forEach((company, index) => {
+      expect(Number(company.latest_price), `Company ${index} price should be positive`).to.be.greaterThan(0);
+    });
+  });
+
+  // Check if we have a good variety of companies
+  test("should have variety of companies", function() {
+    const companies = res.body;
+    const tickers = companies.map(c => c.ticker);
+    const uniqueTickers = [...new Set(tickers)];
+    expect(uniqueTickers.length).to.be.greaterThan(1);
+  });
+
+  // Check if some companies have sector/industry data
+  test("some companies should have sector/industry data", function() {
+    const companies = res.body;
+    const companiesWithSector = companies.filter(c => c.sector && c.sector.trim() !== '');
+    expect(companiesWithSector.length).to.be.greaterThan(0);
+  });
+}

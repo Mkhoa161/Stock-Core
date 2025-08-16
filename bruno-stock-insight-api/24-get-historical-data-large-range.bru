@@ -1,0 +1,39 @@
+meta {
+  name: Get Historical Data (Large Date Range)
+  type: http
+  seq: 24
+}
+
+get {
+  url: {{baseUrl}}/api/companies/AAPL/historical?from=2020-01-01&to=2024-12-31
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Get Historical Data (Large Date Range)
+  description: |
+    Test getting historical data with a date range that exceeds 2 years.
+    
+    This endpoint should return:
+    - 400 status code for date range too large
+    - Error message indicating date range cannot exceed 2 years
+}
+
+tests {
+  // Check if response is 400
+  test("should return 400 status", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  // Check if response has error message
+  test("should return error message", function() {
+    expect(res.body).to.have.property('message');
+    expect(res.body.message).to.include('Date range cannot exceed 2 years');
+  });
+
+
+}

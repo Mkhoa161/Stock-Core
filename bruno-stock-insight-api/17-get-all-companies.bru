@@ -1,0 +1,63 @@
+meta {
+  name: Get All Companies
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/api/companies
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Get All Companies
+  description: |
+    Test getting all companies with their latest market data for the dashboard.
+    
+    This endpoint should return:
+    - List of all companies in the database
+    - Latest price, change, market cap, volume data
+    - Company name, ticker, sector, industry
+}
+
+tests {
+  // Check if response is successful
+  test("should return 200 status", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  // Check if response is an array
+  test("should return array of companies", function() {
+    expect(res.body).to.be.an('array');
+  });
+
+  // Check if companies have required fields
+  test("companies should have required fields", function() {
+    if (res.body.length > 0) {
+      const company = res.body[0];
+      expect(company).to.have.property('id');
+      expect(company).to.have.property('ticker');
+      expect(company).to.have.property('name');
+      expect(company).to.have.property('sector');
+      expect(company).to.have.property('industry');
+    }
+  });
+
+  // Check if companies have market data fields
+  test("companies should have market data fields", function() {
+    if (res.body.length > 0) {
+      const company = res.body[0];
+      expect(company).to.have.property('latest_price');
+      expect(company).to.have.property('latest_day_change');
+      expect(company).to.have.property('latest_day_change_percent');
+      expect(company).to.have.property('latest_volume');
+      expect(company).to.have.property('latest_market_cap');
+    }
+  });
+
+
+}

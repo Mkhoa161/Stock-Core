@@ -1,0 +1,39 @@
+meta {
+  name: Get Historical Data (Reverse Date Order)
+  type: http
+  seq: 23
+}
+
+get {
+  url: {{baseUrl}}/api/companies/AAPL/historical?from=2024-01-31&to=2024-01-01
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Get Historical Data (Reverse Date Order)
+  description: |
+    Test getting historical data with start date after end date.
+    
+    This endpoint should return:
+    - 400 status code for invalid date order
+    - Error message indicating start date must be before end date
+}
+
+tests {
+  // Check if response is 400
+  test("should return 400 status", function() {
+    expect(res.status).to.equal(400);
+  });
+
+  // Check if response has error message
+  test("should return error message", function() {
+    expect(res.body).to.have.property('message');
+    expect(res.body.message).to.include('Start date must be before end date');
+  });
+
+
+}
