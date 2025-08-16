@@ -1,8 +1,14 @@
 import dbInterface from '../config/database';
 import { Company, StockPrice, DailySummary, CompanyWithLatestData, CreateCompanyInput, CreateStockPriceInput, CreateDailySummaryInput } from '../models/company';
-import { yahooFinanceService } from './yahooFinanceService';
+
 
 export class CompanyService {
+  async getAllCompanies(): Promise<Company[]> {
+    const query = 'SELECT * FROM companies ORDER BY ticker';
+    const result = await dbInterface.query(query);
+    return result.rows;
+  }
+
   async getAllCompaniesWithLatestData(): Promise<CompanyWithLatestData[]> {
     const query = `
       SELECT 
@@ -46,13 +52,15 @@ export class CompanyService {
     return result.rows[0] || null;
   }
 
-  async getStockPrices(ticker: string, days: number = 30): Promise<StockPrice[]> {
+
+
+  async getDailySummaries(ticker: string, days: number = 30): Promise<DailySummary[]> {
     const query = `
-      SELECT sp.*
-      FROM stock_prices sp
-      JOIN companies c ON sp.company_id = c.id
+      SELECT ds.*
+      FROM daily_summaries ds
+      JOIN companies c ON ds.company_id = c.id
       WHERE c.ticker = $1
-      ORDER BY sp.date DESC
+      ORDER BY ds.date DESC
       LIMIT $2
     `;
     const result = await dbInterface.query(query, [ticker.toUpperCase(), days]);
@@ -125,97 +133,150 @@ export class CompanyService {
   }
 
   /**
-   * Fetch and store latest data from Yahoo Finance
+   * Update company with latest market data (without historical data)
    */
-  async updateCompanyDataFromYahoo(ticker: string): Promise<boolean> {
+  async updateCompanyMarketData(companyId: number, marketData: {
+    price: number;
+    change: number;
+    changePercent: number;
+    volume: number;
+    marketCap: number;
+  }): Promise<void> {
     try {
-      // Get company from database
-      let company = await this.getCompanyByTicker(ticker);
-      if (!company) {
-        // Try to create company from Yahoo Finance data
-        const quote = await yahooFinanceService.getQuote(ticker);
-        if (!quote) {
-          throw new Error(`Company not found and could not fetch from Yahoo Finance: ${ticker}`);
-        }
-        
-        company = await this.createCompany({
-          ticker: quote.symbol,
-          name: quote.companyName || ticker,
-          sector: '',
-          industry: ''
-        });
-      }
+      const today = new Date();
+      
+      // Update or create daily summary with latest market data
+      await this.createDailySummary({
+        company_id: companyId,
+        date: today,
+        price: marketData.price,
+        day_change: marketData.change,
+        day_change_percent: marketData.changePercent,
+        market_cap: marketData.marketCap,
+        volume: marketData.volume
+      });
+      
+      console.log(`✅ Updated market data for company ${companyId}`);
+    } catch (error) {
+      console.error(`❌ Error updating market data for company ${companyId}:`, error);
+      throw error;
+    }
+  }
 
-      if (!company) {
-        throw new Error(`Failed to create or retrieve company: ${ticker}`);
-      }
-
-      // At this point, company is guaranteed to be non-null
-      const companyId = company.id;
-
-      // Get latest quote from Yahoo Finance
-      const quote = await yahooFinanceService.getQuote(ticker);
-      if (!quote) {
-        throw new Error(`Could not fetch quote for ${ticker}`);
-      }
-
-      // Get historical data for the last 30 days
-      const chartData = await yahooFinanceService.getChartData(ticker, 30);
-      if (!chartData || chartData.length === 0) {
-        throw new Error(`Could not fetch chart data for ${ticker}`);
-      }
-
+  /**
+   * Update company with historical data
+   */
+  async updateCompanyHistoricalData(companyId: number, historicalData: Array<{
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>): Promise<void> {
+    try {
+      let recordsCreated = 0;
+      
       // Process each day's data
-      for (let i = 0; i < chartData.length; i++) {
-        const dayData = chartData[i];
+      for (let i = 0; i < historicalData.length; i++) {
+        const dayData = historicalData[i];
         if (!dayData) continue;
         
-        const date = new Date(dayData.timestamp);
+        const date = new Date(dayData.date);
         const open = dayData.open;
         const high = dayData.high;
         const low = dayData.low;
         const close = dayData.close;
         const volume = dayData.volume;
-
+        
         if (open && high && low && close) {
-          // Store stock price data
-          await this.createStockPrice({
-            company_id: companyId,
-            date,
-            open_price: open,
-            high_price: high,
-            low_price: low,
-            close_price: close,
-            volume,
-            market_cap: quote.marketCap
-          });
-
-          // Calculate day change if we have previous day data
-          if (i > 0) {
-            const previousClose = chartData[i - 1]?.close || close;
-            const dayChange = close - previousClose;
-            const dayChangePercent = previousClose > 0 ? (dayChange / previousClose) * 100 : 0;
-
-            // Store daily summary
-            await this.createDailySummary({
+          try {
+            // Create stock price record
+            await this.createStockPrice({
               company_id: companyId,
               date,
-              price: close,
-              day_change: parseFloat(dayChange.toFixed(2)),
-              day_change_percent: parseFloat(dayChangePercent.toFixed(2)),
-              market_cap: quote.marketCap,
-              volume
+              open_price: open,
+              high_price: high,
+              low_price: low,
+              close_price: close,
+              volume,
+              market_cap: 0 // Will be updated with current market cap
             });
+            
+            recordsCreated++;
+          } catch (error: any) {
+            // Skip if record already exists (unique constraint)
+            if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('duplicate key')) {
+              // Record already exists, skip
+            } else {
+              throw error;
+            }
           }
         }
       }
-
-      return true;
+      
+      console.log(`✅ Updated historical data for company ${companyId}: ${recordsCreated} records`);
     } catch (error) {
-      console.error(`Error updating company data for ${ticker}:`, error);
-      return false;
+      console.error(`❌ Error updating historical data for company ${companyId}:`, error);
+      throw error;
     }
   }
+
+  /**
+   * Update company profile information
+   */
+  async updateCompanyProfile(companyId: number, profileData: {
+    sector?: string;
+    industry?: string;
+    name?: string;
+  }): Promise<void> {
+    try {
+      const updateFields: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      if (profileData.sector !== undefined) {
+        updateFields.push(`sector = $${paramIndex++}`);
+        values.push(profileData.sector);
+      }
+
+      if (profileData.industry !== undefined) {
+        updateFields.push(`industry = $${paramIndex++}`);
+        values.push(profileData.industry);
+      }
+
+      if (profileData.name !== undefined) {
+        updateFields.push(`name = $${paramIndex++}`);
+        values.push(profileData.name);
+      }
+
+      if (updateFields.length === 0) {
+        console.log('No fields to update for company profile');
+        return;
+      }
+
+      updateFields.push(`updated_at = NOW()`);
+      values.push(companyId);
+
+      const query = `
+        UPDATE companies 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+      `;
+
+      const result = await dbInterface.query(query, values);
+      
+      if (result.rowCount && result.rowCount > 0) {
+        console.log(`✅ Updated profile for company ${companyId}`);
+      } else {
+        console.log(`⚠️ No company found with ID ${companyId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error updating company profile for ${companyId}:`, error);
+      throw error;
+    }
+  }
+
 }
 
 export const companyService = new CompanyService();

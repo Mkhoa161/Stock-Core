@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { companyService } from '../services/companyService';
-import { authenticateToken, AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { historicalDataService } from '../services/historicalDataService';
 
 const router = Router();
 
@@ -34,129 +34,80 @@ router.get('/:ticker', async (req: Request, res: Response) => {
   }
 });
 
-// Get stock prices for a company (for candlestick chart)
-router.get('/:ticker/prices', async (req: Request, res: Response) => {
+
+
+// Get historical data with lazy loading (supports custom date ranges)
+router.get('/:ticker/historical', async (req: Request, res: Response) => {
   try {
     const { ticker } = req.params;
     if (!ticker) {
       return res.status(400).json({ message: 'Ticker is required' });
     }
     
-    const days = parseInt(req.query.days as string) || 30;
+    // Support both old format (days) and new format (date range)
+    const days = req.query.days ? parseInt(req.query.days as string) : null;
+    const fromDate = req.query.from as string;
+    const toDate = req.query.to as string;
     
-    const prices = await companyService.getStockPrices(ticker, days);
-    
-    if (!prices || prices.length === 0) {
-      return res.status(404).json({ message: 'No price data found for this company' });
+    // Validate date range if provided
+    if (fromDate && toDate) {
+      const from = new Date(fromDate);
+      const to = new Date(toDate);
+      
+      if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+        return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
+      }
+      
+      if (from > to) {
+        return res.status(400).json({ message: 'Start date must be before end date' });
+      }
+      
+      // Check if date range is too large (max 2 years)
+      const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff > 730) {
+        return res.status(400).json({ message: 'Date range cannot exceed 2 years' });
+      }
     }
     
-    res.json(prices);
-  } catch (error: any) {
-    res.status(500).json({ message: 'Failed to fetch stock prices', error: error.message });
-  }
-});
-
-// Create a new company (admin only - for data seeding)
-router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { ticker, name, sector, industry } = req.body;
-    
-    if (!ticker || !name) {
-      return res.status(400).json({ message: 'Ticker and name are required' });
-    }
-    
-    const company = await companyService.createCompany({ ticker, name, sector, industry });
-    res.status(201).json(company);
-  } catch (error: any) {
-    if (error.message.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ message: 'Company with this ticker already exists' });
-    }
-    res.status(500).json({ message: 'Failed to create company', error: error.message });
-  }
-});
-
-// Add stock price data (for data pipeline)
-router.post('/:ticker/prices', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { ticker } = req.params;
-    if (!ticker) {
-      return res.status(400).json({ message: 'Ticker is required' });
-    }
-    
-    const { date, open_price, high_price, low_price, close_price, volume, market_cap } = req.body;
-    
-    // Get company ID
-    const company = await companyService.getCompanyByTicker(ticker);
-    if (!company) {
-      return res.status(404).json({ message: 'Company not found' });
-    }
-    
-    const stockPrice = await companyService.createStockPrice({
-      company_id: company.id,
-      date: new Date(date),
-      open_price,
-      high_price,
-      low_price,
-      close_price,
-      volume,
-      market_cap
+    // Use lazy loading service with date range
+    const result = await historicalDataService.getHistoricalData({ 
+      ticker, 
+      days: days || undefined,
+      fromDate,
+      toDate
     });
     
-    res.status(201).json(stockPrice);
-  } catch (error: any) {
-    res.status(500).json({ message: 'Failed to create stock price', error: error.message });
-  }
-});
-
-// Add daily summary data (for data pipeline)
-router.post('/:ticker/summary', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { ticker } = req.params;
-    if (!ticker) {
-      return res.status(400).json({ message: 'Ticker is required' });
+    if (!result.success) {
+      return res.status(404).json({ 
+        message: 'Failed to fetch historical data', 
+        error: result.error 
+      });
     }
     
-    const { date, price, day_change, day_change_percent, market_cap, volume } = req.body;
-    
-    // Get company ID
-    const company = await companyService.getCompanyByTicker(ticker);
-    if (!company) {
-      return res.status(404).json({ message: 'Company not found' });
+    // Calculate days for response
+    let responseDays = 60; // default
+    if (days) {
+      responseDays = days;
+    } else if (fromDate && toDate) {
+      responseDays = Math.ceil((new Date(toDate).getTime() - new Date(fromDate).getTime()) / (1000 * 60 * 60 * 24));
     }
     
-    const summary = await companyService.createDailySummary({
-      company_id: company.id,
-      date: new Date(date),
-      price,
-      day_change,
-      day_change_percent,
-      market_cap,
-      volume
+    // Return with metadata about the source
+    res.json({
+      ticker,
+      dateRange: fromDate && toDate ? { from: fromDate, to: toDate } : null,
+      days: responseDays,
+      dataPoints: result.data?.length || 0,
+      data: result.data,
+      source: result.source,
+      cached: result.cached,
+      message: result.cached 
+        ? 'Data retrieved from cache' 
+        : 'Data fetched from API and cached'
     });
     
-    res.status(201).json(summary);
   } catch (error: any) {
-    res.status(500).json({ message: 'Failed to create daily summary', error: error.message });
-  }
-});
-
-// Update company data from Yahoo Finance
-router.post('/:ticker/update-from-yahoo', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { ticker } = req.params;
-    if (!ticker) {
-      return res.status(400).json({ message: 'Ticker is required' });
-    }
-    
-    const success = await companyService.updateCompanyDataFromYahoo(ticker);
-    
-    if (success) {
-      res.json({ message: `Successfully updated data for ${ticker}` });
-    } else {
-      res.status(500).json({ message: `Failed to update data for ${ticker}` });
-    }
-  } catch (error: any) {
-    res.status(500).json({ message: 'Failed to update company data', error: error.message });
+    res.status(500).json({ message: 'Failed to fetch historical data', error: error.message });
   }
 });
 

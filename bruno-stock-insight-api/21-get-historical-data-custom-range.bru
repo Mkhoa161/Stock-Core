@@ -1,0 +1,94 @@
+meta {
+  name: Get Historical Data (Custom Date Range)
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{baseUrl}}/api/companies/AAPL/historical?from=2024-01-01&to=2024-01-31
+  body: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Get Historical Data (Custom Date Range)
+  description: |
+    Test getting historical data using custom date range parameters.
+    
+    This endpoint should return:
+    - Historical data for the specified date range (Jan 1-31, 2024)
+    - OHLCV data (open, high, low, close, volume)
+    - Metadata including dateRange information
+    - Data from either cache or API
+}
+
+tests {
+  // Check if response is successful
+  test("should return 200 status", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  // Check if response has required fields
+  test("should have required response fields", function() {
+    expect(res.body).to.have.property('ticker');
+    expect(res.body).to.have.property('days');
+    expect(res.body).to.have.property('dataPoints');
+    expect(res.body).to.have.property('data');
+    expect(res.body).to.have.property('source');
+    expect(res.body).to.have.property('cached');
+    expect(res.body).to.have.property('message');
+    expect(res.body).to.have.property('dateRange');
+  });
+
+  // Check if ticker is correct
+  test("should return correct ticker", function() {
+    expect(res.body.ticker).to.equal('AAPL');
+  });
+
+  // Check if dateRange is correct
+  test("should return correct date range", function() {
+    expect(res.body.dateRange).to.have.property('from');
+    expect(res.body.dateRange).to.have.property('to');
+    expect(res.body.dateRange.from).to.equal('2024-01-01');
+    expect(res.body.dateRange.to).to.equal('2024-01-31');
+  });
+
+  // Check if data is an array
+  test("data should be an array", function() {
+    expect(res.body.data).to.be.an('array');
+  });
+
+  // Check if historical data has required fields
+  test("historical data should have OHLCV fields", function() {
+    if (res.body.data.length > 0) {
+      const dataPoint = res.body.data[0];
+      expect(dataPoint).to.have.property('date');
+      expect(dataPoint).to.have.property('open');
+      expect(dataPoint).to.have.property('high');
+      expect(dataPoint).to.have.property('low');
+      expect(dataPoint).to.have.property('close');
+      expect(dataPoint).to.have.property('volume');
+    }
+  });
+
+  // Check if data dates are within range
+  test("data dates should be within specified range", function() {
+    if (res.body.data.length > 0) {
+      const firstDate = new Date(res.body.data[0].date);
+      const lastDate = new Date(res.body.data[res.body.data.length - 1].date);
+      const fromDate = new Date('2024-01-01');
+      const toDate = new Date('2024-01-31');
+      
+      expect(firstDate).to.be.at.least(fromDate);
+      expect(lastDate).to.be.at.most(toDate);
+    }
+  });
+
+  // Check if source is valid
+  test("source should be valid", function() {
+    expect(['database', 'api']).to.include(res.body.source);
+  });
+}
