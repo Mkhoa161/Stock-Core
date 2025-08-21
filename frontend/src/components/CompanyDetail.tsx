@@ -72,7 +72,7 @@ export function CompanyDetail({ params }: CompanyDetailProps) {
     const afterFrom = !from || date >= from;
     const beforeTo = !to || date <= to;
     return afterFrom && beforeTo;
-  });
+  }).reverse(); // Reverse to get chronological order (oldest first) for chart
 
   // Candlestick chart
   const chartRef = useRef<HTMLDivElement>(null);

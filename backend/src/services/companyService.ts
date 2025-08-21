@@ -156,6 +156,14 @@ export class CompanyService {
         volume: marketData.volume
       });
       
+      // Update company's updated_at timestamp
+      const updateQuery = `
+        UPDATE companies 
+        SET updated_at = NOW()
+        WHERE id = $1
+      `;
+      await dbInterface.query(updateQuery, [companyId]);
+      
       console.log(`✅ Updated market data for company ${companyId}`);
     } catch (error) {
       console.error(`❌ Error updating market data for company ${companyId}:`, error);
