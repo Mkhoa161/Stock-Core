@@ -9,7 +9,7 @@ class ApiError extends Error {
 }
 
 const baseUrl =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:8000";
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:3000";
 
 /**
  * Handle a response from fetch to the API

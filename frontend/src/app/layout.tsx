@@ -1,4 +1,5 @@
 import { QueryProvider } from "@/providers";
+import Navigation from "@/components/Navigation";
 import "./globals.css";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +8,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <QueryProvider>
-            {children}
+          <Navigation />
+          {children}
         </QueryProvider>
       </body>
     </html>
