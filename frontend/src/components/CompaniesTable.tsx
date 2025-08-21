@@ -1,0 +1,193 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { formatCurrency, formatMarketCap, formatVolume, formatDate } from "@/lib/utils";
+import { useCompanies } from "@/lib/hooks";
+
+export function CompaniesTable() {
+  const { data: companies, isLoading, error } = useCompanies();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter companies based on search term
+  const filteredCompanies = useMemo(() => {
+    if (!companies) return [];
+    
+    return companies.filter((company) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        company.ticker.toLowerCase().includes(searchLower) ||
+        company.name.toLowerCase().includes(searchLower) ||
+        company.sector.toLowerCase().includes(searchLower) ||
+        company.industry.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [companies, searchTerm]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8">
+        <div className="text-center">Loading companies...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8">
+        <div className="text-center text-red-600">Error: {error.message}</div>
+      </div>
+    );
+  }
+
+  if (!companies) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8">
+        <div className="text-center text-gray-600">No companies found</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">All Companies</h2>
+          
+          {/* Search Bar */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search by ticker, name, sector, or industry..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400"
+            />
+          </div>
+        </div>
+        
+        {/* Search Results Info */}
+        {searchTerm && (
+          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Showing {filteredCompanies.length} of {companies?.length || 0} companies
+          </div>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 text-xs sm:text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-20">
+                Ticker
+              </th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-48">
+                Company Name
+              </th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
+                Industry
+              </th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                Price
+              </th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-28">
+                Market Cap
+              </th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
+                Day Change
+              </th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                Volume
+              </th>
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-28">
+                Last Updated
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {filteredCompanies.length > 0 ? (
+              filteredCompanies.map((company) => (
+                <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <Link
+                      href={`/company/${company.ticker}`}
+                      className="font-mono font-semibold text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                    >
+                      {company.ticker}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white text-sm truncate max-w-40" title={company.name}>
+                        {company.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-40" title={company.sector}>
+                        {company.sector}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 max-w-24 truncate" title={company.industry}>
+                      {company.industry}
+                    </span>
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-right font-mono text-gray-900 dark:text-white text-sm">
+                    {company.latest_price !== null && company.latest_price !== undefined ? formatCurrency(Number(company.latest_price)) : <span className="text-gray-400">N/A</span>}
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-right font-mono text-gray-900 dark:text-white text-sm">
+                    {company.latest_market_cap !== null && company.latest_market_cap !== undefined ? formatMarketCap(Number(company.latest_market_cap)) : <span className="text-gray-400">N/A</span>}
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {(Number(company.latest_day_change) || 0) >= 0 ? (
+                        <svg className="h-3 w-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" />
+                        </svg>
+                      )}
+                      <span className={`font-mono text-sm ${(Number(company.latest_day_change) || 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {company.latest_day_change !== null && company.latest_day_change !== undefined ? (
+                          <>
+                            {(Number(company.latest_day_change) || 0) >= 0 ? "+" : ""}
+                            {(Number(company.latest_day_change) || 0).toFixed(2)} ({(Number(company.latest_day_change_percent) || 0).toFixed(2)}%)
+                          </>
+                        ) : (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-right font-mono text-gray-500 dark:text-gray-400 text-sm">
+                    {company.latest_volume !== null && company.latest_volume !== undefined ? formatVolume(Number(company.latest_volume)) : <span className="text-gray-400">N/A</span>}
+                  </td>
+                  <td className="px-3 py-4 whitespace-nowrap text-right text-gray-500 dark:text-gray-400 text-xs">
+                    {formatDate(company.updated_at)}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-col items-center">
+                    <svg className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <p className="text-lg font-medium">No companies found</p>
+                    <p className="text-sm">Try adjusting your search terms</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
