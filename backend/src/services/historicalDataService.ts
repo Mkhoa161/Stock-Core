@@ -33,8 +33,8 @@ export class HistoricalDataService {
 
   /**
    * Get historical data for a company with lazy loading
-   * 1. Check database first
-   * 2. If not available, fetch from FMP API
+   * 1. Check database first for the exact requested range
+   * 2. If not available or incomplete, fetch from FMP API
    * 3. Cache in database and return
    */
   async getHistoricalData(request: HistoricalDataRequest): Promise<HistoricalDataResponse> {
@@ -68,13 +68,32 @@ export class HistoricalDataService {
         requestedDays = this.MAX_DAYS;
       }
       
-      // Step 1: Check if we have data in database for the requested range
+      // Step 1: Check if we have complete data in database for the exact requested range
       const dbData = await this.getHistoricalDataFromDatabase(ticker, requestedDays, fromDate, toDate);
       
-      if (fromDate && toDate) {
-        // For custom date range, return all data found (don't limit by requestedDays)
+      // Check if we have complete data for the requested range
+      const hasCompleteData = this.checkDataCompleteness(dbData, startDate, endDate, requestedDays);
+      
+      if (hasCompleteData) {
+        console.log(`✅ Found complete historical data in database for ${ticker} (${dbData.length} days)`);
+        return {
+          success: true,
+          data: dbData,
+          source: 'database',
+          cached: true
+        };
+      }
+      
+      // Step 2: Database doesn't have complete data, fetch from FMP
+      console.log(`🔄 Database has incomplete data (${dbData.length} days), fetching from FMP...`);
+      
+      // Use FMP's native date range support
+      const apiData = await this.fetchHistoricalDataFromAPI(ticker, requestedDays, fromDate, toDate);
+      
+      if (!apiData.success || !apiData.data) {
+        // If API fails but we have some data, return what we have
         if (dbData.length > 0) {
-          console.log(`✅ Found ${dbData.length} days of historical data in database for ${ticker} in date range`);
+          console.log(`⚠️ API failed, returning ${dbData.length} days of cached data for ${ticker}`);
           return {
             success: true,
             data: dbData,
@@ -82,26 +101,7 @@ export class HistoricalDataService {
             cached: true
           };
         }
-      } else {
-        // For backward compatibility (days parameter), check if we have enough data
-        if (dbData.length >= requestedDays) {
-          console.log(`✅ Found ${dbData.length} days of historical data in database for ${ticker}`);
-          return {
-            success: true,
-            data: dbData.slice(0, requestedDays),
-            source: 'database',
-            cached: true
-          };
-        }
-      }
-      
-      // Step 2: Database doesn't have enough data, fetch from FMP
-      console.log(`🔄 Database has ${dbData.length} days, fetching from FMP...`);
-      
-      // Use FMP's native date range support
-      const apiData = await this.fetchHistoricalDataFromAPI(ticker, requestedDays, fromDate, toDate);
-      
-      if (!apiData.success || !apiData.data) {
+        
         return {
           success: false,
           error: apiData.error || 'Failed to fetch historical data from API',
@@ -134,6 +134,57 @@ export class HistoricalDataService {
   }
 
   /**
+   * Check if the database has complete data for the requested range
+   */
+  private checkDataCompleteness(
+    dbData: Array<{
+      date: string;
+      open: number;
+      high: number;
+      low: number;
+      close: number;
+      volume: number;
+    }>,
+    startDate: Date,
+    endDate: Date,
+    requestedDays: number
+  ): boolean {
+    if (dbData.length === 0) {
+      return false;
+    }
+
+    // Sort data by date to ensure proper order
+    const sortedData = dbData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    // Check if we have data covering the entire requested range
+    const firstDate = new Date(sortedData[0]?.date || '');
+    const lastDate = new Date(sortedData[sortedData.length - 1]?.date || '');
+    
+    // For custom date range (from/to), check if we have data from start to end
+    if (startDate && endDate) {
+      const hasStartData = firstDate <= startDate;
+      const hasEndData = lastDate >= endDate;
+      const hasEnoughDays = sortedData.length >= requestedDays;
+      
+      console.log(`🔍 Data completeness check: start=${hasStartData}, end=${hasEndData}, days=${hasEnoughDays}, actual=${sortedData.length}/${requestedDays}`);
+      
+      return hasStartData && hasEndData && hasEnoughDays;
+    }
+    
+    // For days parameter, check if we have the most recent N days
+    const expectedEndDate = new Date(); // Today
+    const expectedStartDate = new Date();
+    expectedStartDate.setDate(expectedEndDate.getDate() - requestedDays);
+    
+    const hasRecentData = lastDate >= expectedStartDate;
+    const hasEnoughDays = sortedData.length >= requestedDays;
+    
+    console.log(`🔍 Data completeness check: recent=${hasRecentData}, days=${hasEnoughDays}, actual=${sortedData.length}/${requestedDays}, lastDate=${lastDate.toISOString().split('T')[0]}, expectedStart=${expectedStartDate.toISOString().split('T')[0]}`);
+    
+    return hasRecentData && hasEnoughDays;
+  }
+
+  /**
    * Get historical data from database
    */
   private async getHistoricalDataFromDatabase(
@@ -155,53 +206,53 @@ export class HistoricalDataService {
       
       if (fromDate && toDate) {
         // Custom date range query
-                 query = `
-           SELECT 
-             date,
-             open_price as open,
-             high_price as high,
-             low_price as low,
-             close_price as close,
-             volume
-           FROM stock_prices sp
-           JOIN companies c ON sp.company_id = c.id
-           WHERE c.ticker = $1
-             AND date >= $2
-             AND date <= $3
-           ORDER BY date ASC
-         `;
+        query = `
+          SELECT 
+            date,
+            open_price as open,
+            high_price as high,
+            low_price as low,
+            close_price as close,
+            volume
+          FROM stock_prices sp
+          JOIN companies c ON sp.company_id = c.id
+          WHERE c.ticker = $1
+            AND date >= $2
+            AND date <= $3
+          ORDER BY date ASC
+        `;
         params = [ticker.toUpperCase(), fromDate, toDate];
       } else {
         // Default: get last N days
-                 query = `
-           SELECT 
-             date,
-             open_price as open,
-             high_price as high,
-             low_price as low,
-             close_price as close,
-             volume
-           FROM stock_prices sp
-           JOIN companies c ON sp.company_id = c.id
-           WHERE c.ticker = $1
-           ORDER BY date DESC
-           LIMIT $2
-         `;
+        query = `
+          SELECT 
+            date,
+            open_price as open,
+            high_price as high,
+            low_price as low,
+            close_price as close,
+            volume
+          FROM stock_prices sp
+          JOIN companies c ON sp.company_id = c.id
+          WHERE c.ticker = $1
+          ORDER BY date DESC
+          LIMIT $2
+        `;
         params = [ticker.toUpperCase(), days];
       }
       
       const result = await dbInterface.query(query, params);
       
-             // Convert to expected format
-       const data = result.rows.map(row => ({
-         date: row.date,
-         open: row.open,
-         high: row.high,
-         low: row.low,
-         close: row.close,
-         volume: row.volume
-       }));
-      
+      // Convert to expected format
+      const data = result.rows.map(row => ({
+        date: row.date,
+        open: row.open,
+        high: row.high,
+        low: row.low,
+        close: row.close,
+        volume: row.volume
+      }));
+    
       // For custom date range, data is already in correct order (ASC)
       // For default query, reverse to get oldest first
       return fromDate && toDate ? data : data.reverse();
