@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { fmpService } from '../services/fmpService';
 import { companyService } from '../services/companyService';
+import { historicalDataService } from '../services/historicalDataService';
 import { scrapeSP500Companies } from '../scripts/scrapeSP500';
 import * as dotenv from 'dotenv';
 
@@ -277,6 +278,9 @@ class DailyDataCollector {
       // Step 3: Collect historical data
       const historicalDataCollected = await this.collectHistoricalData();
       
+      // Step 4: Clean up old historical data
+      await this.cleanupOldHistoricalData();
+      
       const executionTime = Date.now() - startTime;
       
       const result: DailyCollectionResult = {
@@ -318,6 +322,24 @@ class DailyDataCollector {
         errors: this.errors,
         timestamp: new Date().toISOString()
       };
+    }
+  }
+
+  /**
+   * Step 4: Clean up old historical data
+   */
+  async cleanupOldHistoricalData(): Promise<void> {
+    try {
+      console.log('🧹 Step 4: Cleaning up old historical data...');
+      
+      await historicalDataService.cleanupOldHistoricalData();
+      
+      console.log('✅ Step 4 completed: Old historical data cleaned up');
+      
+    } catch (error: any) {
+      const errorMsg = `Failed to cleanup old historical data: ${error.message}`;
+      console.error(`❌ ${errorMsg}`);
+      this.errors.push(errorMsg);
     }
   }
 
