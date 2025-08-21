@@ -25,20 +25,6 @@ export default function Navigation() {
           >
             All Companies
           </Link>
-          <div className="flex space-x-4">
-            <Link 
-              href="/auth/login" 
-              className="text-gray-300 hover:text-blue-300"
-            >
-              Login
-            </Link>
-            <Link 
-              href="/auth/register" 
-              className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"
-            >
-              Register
-            </Link>
-          </div>
         </div>
       </div>
     </nav>

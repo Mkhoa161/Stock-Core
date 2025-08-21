@@ -6,9 +6,6 @@ export default function WelcomePage() {
         Explore company data, visualize stock prices, and more.<br />
         <a href="/companies" className="text-blue-600 underline">Browse all companies</a> or explore individual stocks.
       </p>
-      <p className="text-sm text-gray-600">
-        <a href="/auth/login" className="text-blue-600 underline">Login</a> or <a href="/auth/register" className="text-blue-600 underline">register</a> for personalized features coming soon.
-      </p>
     </div>
   );
 }
