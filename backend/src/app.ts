@@ -5,13 +5,14 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes';
 import companyRoutes from './routes/companyRoutes';
 import { errorHandler } from './middlewares/errorHandler';
+import config from './config/config';
 import './config/passport';
 
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+  origin: config.frontendUrl,
   credentials: true,
 }));
 app.use(express.json());
@@ -25,7 +26,7 @@ app.use('/api/companies', companyRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+  res.json({ status: 'OK', message: 'Server is running', environment: config.nodeEnv });
 });
 
 // Global error handler (should be after routes)

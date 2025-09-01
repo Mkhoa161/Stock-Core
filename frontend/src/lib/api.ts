@@ -8,8 +8,13 @@ class ApiError extends Error {
   }
 }
 
-const baseUrl =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:3000";
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+
+// Validate production environment variable
+if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_BASE_URL) {
+  throw new Error('NEXT_PUBLIC_API_BASE_URL is required in production');
+}
 
 /**
  * Handle a response from fetch to the API
