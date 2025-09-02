@@ -9,7 +9,7 @@ export default function Navigation() {
     <nav className="bg-gray-800 text-white p-4">
       <div className="container mx-auto flex justify-between items-center">
         <Link href="/" className="text-xl font-bold hover:text-blue-300">
-          Stock Insight
+          Stock Core
         </Link>
         
         <div className="flex space-x-6">

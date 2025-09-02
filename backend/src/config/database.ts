@@ -1,11 +1,8 @@
 import { Client } from 'pg';
-import dotenv from 'dotenv';
+import config from './config';
 
-// Load environment variables
-dotenv.config();
-
-// Create PostgreSQL connection string
-const connectionString = `postgres://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'stock_insight'}`;
+// Create PostgreSQL connection string using centralized config
+const connectionString = `postgres://${config.database.username}:${config.database.password}@${config.database.host}:${config.database.port}/${config.database.database}`;
 
 // Create PostgreSQL client
 const client = new Client(connectionString);

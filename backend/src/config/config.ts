@@ -9,7 +9,15 @@ interface Config {
   baseURL: string;
   googleClientId: string;
   googleClientSecret: string;
+  googleRedirectUri: string;
   frontendUrl: string;
+  database: {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    database: string;
+  };
 }
 
 const config: Config = {
@@ -19,7 +27,15 @@ const config: Config = {
   baseURL: process.env.BASE_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000'),
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001/auth/google/callback'),
   frontendUrl: process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001'),
+  database: {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 5432,
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    database: process.env.DB_NAME || 'postgres',
+  },
 };
 
 // Validate required production environment variables

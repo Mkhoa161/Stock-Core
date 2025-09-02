@@ -11,7 +11,7 @@ export function useCompanies() {
   return useQuery({
     queryKey: ["companies"],
     queryFn: async (): Promise<Company[]> => {
-      const data = await api.get("/api/companies");
+      const data = await api.get("/api/companies/");
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -29,7 +29,7 @@ export function useCompany(ticker: string) {
     },
     enabled: !!ticker,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
 }
 
@@ -84,7 +84,7 @@ export function useHistoricalData({ ticker, from, to, days = 30 }: UseHistorical
     },
     enabled: !!ticker,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
 }
 
