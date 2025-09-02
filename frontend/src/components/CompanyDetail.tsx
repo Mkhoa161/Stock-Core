@@ -10,44 +10,6 @@ interface CompanyDetailProps {
   params: Promise<{ ticker: string }>;
 }
 
-interface Company {
-  id: number;
-  ticker: string;
-  name: string;
-  sector: string;
-  industry: string;
-  latest_price: number;
-  latest_day_change: number;
-  latest_day_change_percent: number;
-  latest_volume: number;
-  latest_market_cap: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface HistoricalData {
-  date: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-interface HistoricalResponse {
-  ticker: string;
-  dateRange?: {
-    from: string;
-    to: string;
-  };
-  days: number;
-  dataPoints: number;
-  data: HistoricalData[];
-  source: string;
-  cached: boolean;
-  message: string;
-}
-
 export function CompanyDetail({ params }: CompanyDetailProps) {
   const { ticker } = use(params);
   const [from, setFrom] = useState("");

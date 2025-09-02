@@ -9,7 +9,7 @@ class ApiError extends Error {
 }
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+  (process.env.NODE_ENV === 'production' ? 'https://your-ec2-public-ip:3000' : 'http://localhost:3000');
 
 // Validate production environment variable
 if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_BASE_URL) {

@@ -69,7 +69,7 @@ export function useHistoricalData({ ticker, from, to, days = 30 }: UseHistorical
   return useQuery({
     queryKey: ["historical", ticker, from, to, days],
     queryFn: async (): Promise<HistoricalResponse> => {
-      let url = `/api/companies/${ticker}/historical`;
+      const url = `/api/companies/${ticker}/historical`;
       const params: Record<string, string> = {};
       
       if (from && to) {
