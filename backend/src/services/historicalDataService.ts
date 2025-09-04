@@ -253,8 +253,8 @@ export class HistoricalDataService {
         volume: row.volume
       }));
     
-      // For custom date range, data is already in correct order (ASC)
-      // For default query, reverse to get oldest first
+      // For custom date range, data is already in chronological order (ASC)
+      // For default query, reverse to get chronological order (oldest to newest)
       return fromDate && toDate ? data : data.reverse();
       
     } catch (error) {

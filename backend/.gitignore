@@ -11,6 +11,13 @@ out/
 
 # Environment variables
 .env
+.env.local
+.env.production
+.env.staging
+
+# Docker compose files with sensitive data
+docker-compose.prod.yml
+docker-compose.staging.yml
 
 # Database files (development)
 *.db
@@ -33,3 +40,6 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
+
+# Deployment files
+deploy/
