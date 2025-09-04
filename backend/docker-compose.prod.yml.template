@@ -1,0 +1,20 @@
+services:
+  # Backend API (Production - EC2)
+  backend:
+    build: .
+    container_name: stock-insight-backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - FMP_API_KEY=${FMP_API_KEY}
+    restart: unless-stopped
+    networks:
+      - stock-insight-network
+
+networks:
+  stock-insight-network:
+    driver: bridge
