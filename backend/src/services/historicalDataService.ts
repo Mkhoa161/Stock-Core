@@ -16,11 +16,11 @@ export interface HistoricalDataResponse {
   success: boolean;
   data?: Array<{
     date: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
+    open: number | null;
+    high: number | null;
+    low: number | null;
+    close: number | null;
+    volume: number | null;
   }>;
   error?: string;
   source: 'database' | 'api';
@@ -140,11 +140,11 @@ export class HistoricalDataService {
   private checkDataCompleteness(
     dbData: Array<{
       date: string;
-      open: number;
-      high: number;
-      low: number;
-      close: number;
-      volume: number;
+      open: number | null;
+      high: number | null;
+      low: number | null;
+      close: number | null;
+      volume: number | null;
     }>,
     startDate: Date,
     endDate: Date,
@@ -191,17 +191,17 @@ export class HistoricalDataService {
    * Get historical data from database
    */
   private async getHistoricalDataFromDatabase(
-    ticker: string, 
-    days: number, 
-    fromDate?: string, 
+    ticker: string,
+    days: number,
+    fromDate?: string,
     toDate?: string
   ): Promise<Array<{
     date: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
+    open: number | null;
+    high: number | null;
+    low: number | null;
+    close: number | null;
+    volume: number | null;
   }>> {
     try {
       let query: string;
@@ -275,11 +275,11 @@ export class HistoricalDataService {
     success: boolean;
     data?: Array<{
       date: string;
-      open: number;
-      high: number;
-      low: number;
-      close: number;
-      volume: number;
+      open: number | null;
+      high: number | null;
+      low: number | null;
+      close: number | null;
+      volume: number | null;
     }>;
     error?: string;
   }> {
@@ -319,11 +319,11 @@ export class HistoricalDataService {
    */
   private async cacheHistoricalData(ticker: string, data: Array<{
     date: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
+    open: number | null;
+    high: number | null;
+    low: number | null;
+    close: number | null;
+    volume: number | null;
   }>): Promise<void> {
     try {
       // Get company ID
