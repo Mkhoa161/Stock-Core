@@ -333,37 +333,13 @@ export class HistoricalDataService {
         return;
       }
       
-      let cachedCount = 0;
-      
-      // Cache each day's data
-      for (const dayData of data) {
-        try {
-          const date = new Date(dayData.date);
-          
-          await companyService.createStockPrice({
-            company_id: company.id,
-            date,
-            open_price: dayData.open,
-            high_price: dayData.high,
-            low_price: dayData.low,
-            close_price: dayData.close,
-            volume: dayData.volume,
-            market_cap: 0 // Will be updated with current market cap later
-          });
-          
-          cachedCount++;
-          
-        } catch (error: any) {
-          // Skip if record already exists (unique constraint)
-          if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('duplicate key')) {
-            // Record already exists, skip
-          } else {
-            console.error(`❌ Error caching historical data for ${ticker} on ${dayData.date}:`, error);
-          }
-        }
+      try {
+        await companyService.bulkUpsertStockPrices(company.id, data);
+        console.log(`✅ Cached ${data.length} historical records for ${ticker}`);
+      } catch (error) {
+        console.error(`❌ Bulk upsert failed for ${ticker}:`, error);
+        // Per D-03: skip this ticker, do not re-throw
       }
-      
-      console.log(`✅ Cached ${cachedCount} new historical records for ${ticker}`);
       
     } catch (error) {
       console.error(`❌ Error caching historical data for ${ticker}:`, error);
