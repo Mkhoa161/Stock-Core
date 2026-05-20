@@ -42,8 +42,33 @@ describe('YahooFinanceService', () => {
   });
 
   describe('withRetry', () => {
-    test.todo('retries on HTTPError code 429');
-    test.todo('does not retry on HTTPError code 404');
+    test('retries on HTTPError code 429', async () => {
+      const HTTPError = yahooFinance.errors['HTTPError'];
+      const err429 = new (HTTPError as any)('Too Many Requests');
+      (err429 as any).code = 429;
+
+      const fn = jest.fn();
+      // Reject with 429 twice then succeed
+      fn.mockRejectedValueOnce(err429)
+        .mockRejectedValueOnce(err429)
+        .mockResolvedValueOnce('success');
+
+      // Access private method via type cast
+      const result = await (svc as any).withRetry(fn);
+      expect(fn).toHaveBeenCalledTimes(3);
+      expect(result).toBe('success');
+    });
+
+    test('does not retry on HTTPError code 404', async () => {
+      const HTTPError = yahooFinance.errors['HTTPError'];
+      const err404 = new (HTTPError as any)('Not Found');
+      (err404 as any).code = 404;
+
+      const fn = jest.fn().mockRejectedValue(err404);
+
+      await expect((svc as any).withRetry(fn)).rejects.toThrow();
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('setGlobalConfig', () => {
