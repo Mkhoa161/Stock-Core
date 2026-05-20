@@ -34,12 +34,69 @@ describe('YahooFinanceService', () => {
   });
 
   describe('getBulkQuotes', () => {
-    test.todo('calls quote() with array, not per-symbol loop');
-    test.todo('returns null for missing fields, not 0');
+    test('calls quote() with array, not per-symbol loop', async () => {
+      const mockQuote = yahooFinance.quote as jest.Mock;
+      mockQuote.mockResolvedValue([
+        { symbol: 'AAPL', regularMarketPrice: 180, regularMarketChange: -1, regularMarketChangePercent: -0.55, regularMarketVolume: 1000000, marketCap: 2800000000000 },
+        { symbol: 'MSFT', regularMarketPrice: 420, regularMarketChange: 2, regularMarketChangePercent: 0.48, regularMarketVolume: 800000, marketCap: 3100000000000 },
+      ]);
+      await svc.getBulkQuotes(['AAPL', 'MSFT']);
+      // Called once with the array — not once per symbol
+      expect(mockQuote).toHaveBeenCalledTimes(1);
+      expect(mockQuote.mock.calls[0]![0]).toEqual(['AAPL', 'MSFT']);
+    });
+
+    test('returns null for missing fields, not 0', async () => {
+      const mockQuote = yahooFinance.quote as jest.Mock;
+      mockQuote.mockResolvedValue([
+        { symbol: 'AAPL', regularMarketPrice: undefined, regularMarketChange: undefined, regularMarketChangePercent: undefined, regularMarketVolume: undefined, marketCap: undefined },
+      ]);
+      const results = await svc.getBulkQuotes(['AAPL']);
+      expect(results[0]?.price).toBeNull();
+      expect(results[0]?.change).toBeNull();
+      expect(results[0]?.changePercent).toBeNull();
+      expect(results[0]?.volume).toBeNull();
+      expect(results[0]?.marketCap).toBeNull();
+    });
   });
 
   describe('getBulkHistoricalData', () => {
-    test.todo('calls chart() not historical() and reads .quotes');
+    test('calls chart() not historical() and reads .quotes', async () => {
+      const mockChart = yahooFinance.chart as jest.Mock;
+      const today = new Date();
+      mockChart.mockResolvedValue({
+        quotes: [
+          { date: today, open: 180.0, high: 182.5, low: 179.0, close: 181.0, volume: 50000000 },
+          { date: new Date(today.getTime() - 86400000), open: 178.0, high: 180.0, low: 177.0, close: 179.0, volume: 45000000 },
+        ],
+      });
+
+      const result = await svc.getBulkHistoricalData(['AAPL'], 7);
+
+      expect(mockChart).toHaveBeenCalledTimes(1);
+      // Must have called chart(), not historical()
+      expect(yahooFinance.chart).toHaveBeenCalledWith('AAPL', expect.objectContaining({
+        interval: '1d',
+        return: 'array',
+      }));
+      expect(result['AAPL']).toHaveLength(2);
+      expect(result['AAPL']![0]?.open).toBe(180.0);
+    });
+
+    test('preserves null fields from chart() quotes', async () => {
+      const mockChart = yahooFinance.chart as jest.Mock;
+      const today = new Date();
+      mockChart.mockResolvedValue({
+        quotes: [
+          { date: today, open: null, high: null, low: null, close: null, volume: null },
+        ],
+      });
+
+      const result = await svc.getBulkHistoricalData(['AAPL'], 7);
+
+      expect(result['AAPL']![0]?.open).toBeNull();
+      expect(result['AAPL']![0]?.close).toBeNull();
+    });
   });
 
   describe('withRetry', () => {
