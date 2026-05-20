@@ -29,9 +29,9 @@
 ### Static Export
 
 - [x] **SE-01**: A committed `frontend/src/data/tickers.json` file lists all S&P 500 tickers — build does not depend on live API availability
-- [ ] **SE-02**: `generateStaticParams` in `[ticker]/page.tsx` reads from `tickers.json` — generates all 500 company pages at build time
-- [ ] **SE-03**: `export const dynamicParams = false` is set on the `[ticker]` route
-- [ ] **SE-04**: `next build` produces at least 490 files in `out/company/*/index.html` (verifiable post-build)
+- [x] **SE-02**: `generateStaticParams` in `[ticker]/page.tsx` reads from `tickers.json` — generates all 500 company pages at build time
+- [x] **SE-03**: `export const dynamicParams = false` is set on the `[ticker]` route
+- [x] **SE-04**: `next build` produces at least 490 files in `out/company/*/index.html` (verifiable post-build)
 - [x] **SE-05**: S3 error document is configured to serve `404.html` for unknown routes
 
 ### Auth Removal
@@ -97,9 +97,9 @@
 | YF-08 | Phase 2: Yahoo Finance Migration | Complete |
 | YF-09 | Phase 2: Yahoo Finance Migration | Complete |
 | SE-01 | Phase 3: Static Export Hardening | Complete |
-| SE-02 | Phase 3: Static Export Hardening | Pending |
-| SE-03 | Phase 3: Static Export Hardening | Pending |
-| SE-04 | Phase 3: Static Export Hardening | Pending |
+| SE-02 | Phase 3: Static Export Hardening | Complete |
+| SE-03 | Phase 3: Static Export Hardening | Complete |
+| SE-04 | Phase 3: Static Export Hardening | Complete |
 | SE-05 | Phase 3: Static Export Hardening | Complete |
 | AU-01 | Phase 4: Auth Removal | Pending |
 | AU-02 | Phase 4: Auth Removal | Pending |

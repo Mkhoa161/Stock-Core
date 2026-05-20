@@ -1,10 +1,6 @@
-import { AuthContext } from "@/contexts";
-import { useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Company } from "@/types/company";
-
-const useAuth = () => useContext(AuthContext);
 
 // Hook for fetching all companies
 export function useCompanies() {
@@ -88,4 +84,3 @@ export function useHistoricalData({ ticker, from, to, days = 30 }: UseHistorical
   });
 }
 
-export { useAuth };

@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Database Foundation** - Stabilize the connection layer and data access patterns as prerequisite for all concurrent writes
 - [x] **Phase 2: Yahoo Finance Migration** - Complete the data pipeline so Lambda collects all 500 tickers reliably within the 15-min timeout (completed 2026-05-20)
-- [ ] **Phase 3: Static Export Hardening** - Make next build hermetically generate all 500 pre-rendered pages every time
+- [x] **Phase 3: Static Export Hardening** - Make next build hermetically generate all 500 pre-rendered pages every time (completed 2026-05-20)
 - [ ] **Phase 4: Auth Removal** - Delete all auth dead code so the codebase compiles clean as a public read-only dashboard
 
 ## Phase Details
@@ -87,7 +87,7 @@ Plans:
 
 **Wave 2** *(blocked on 03-01: tickers.json must exist before next build can verify)*
 
-- [ ] 03-02-PLAN.md — Rewire generateStaticParams to read tickers.json + dynamicParams = false + not-found.tsx + build verification (SE-02, SE-03, SE-04, SE-05)
+- [x] 03-02-PLAN.md — Rewire generateStaticParams to read tickers.json + dynamicParams = false + not-found.tsx + build verification (SE-02, SE-03, SE-04, SE-05)
 
 ### Phase 4: Auth Removal
 
@@ -101,7 +101,13 @@ Plans:
   3. `backend/package.json` contains no passport, bcryptjs, jsonwebtoken, or cookie-parser entries (packages or @types)
   4. The Express server starts without runtime errors related to passport initialization or missing strategies
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+**Wave 1** *(all parallel — no shared files)*
+
+- [ ] 04-01-PLAN.md — Delete 6 backend auth files, modify app.ts/config.ts/database.ts, npm uninstall 7 packages (AU-01, AU-03, AU-04, AU-05, AU-06, AU-08 backend)
+- [ ] 04-02-PLAN.md — Delete 4 frontend auth files, modify hooks.ts/QueryProvider.tsx (AU-02, AU-07, AU-08 frontend)
+- [ ] 04-03-PLAN.md — Strip auth references from env.production.template, README.md, CLAUDE.md (D-01, D-02, D-03)
 
 ## Progress
 
@@ -112,5 +118,5 @@ Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phas
 |-------|----------------|--------|-----------|
 | 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
 | 2. Yahoo Finance Migration | 4/4 | Complete   | 2026-05-20 |
-| 3. Static Export Hardening | 2/3 | In Progress|  |
-| 4. Auth Removal | 0/TBD | Not started | - |
+| 3. Static Export Hardening | 3/3 | Complete   | 2026-05-20 |
+| 4. Auth Removal | 0/3 | Not started | - |
