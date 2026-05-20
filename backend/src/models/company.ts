@@ -12,11 +12,11 @@ export interface StockPrice {
   id: number;
   company_id: number;
   date: Date;
-  open_price: number;
-  high_price: number;
-  low_price: number;
-  close_price: number;
-  volume: number;
+  open_price: number | null;
+  high_price: number | null;
+  low_price: number | null;
+  close_price: number | null;
+  volume: number | null;
   market_cap?: number;
   created_at: Date;
 }
@@ -51,11 +51,11 @@ export interface CreateCompanyInput {
 export interface CreateStockPriceInput {
   company_id: number;
   date: Date;
-  open_price: number;
-  high_price: number;
-  low_price: number;
-  close_price: number;
-  volume: number;
+  open_price: number | null;
+  high_price: number | null;
+  low_price: number | null;
+  close_price: number | null;
+  volume: number | null;
   market_cap?: number;
 }
 

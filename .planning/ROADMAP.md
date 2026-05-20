@@ -56,7 +56,7 @@ Plans:
 **Wave 1**
 
 - [x] 02-00-PLAN.md — Wave 0: empirical verification (changePercent unit, HTTPError import path) + test scaffolds
-- [ ] 02-01-PLAN.md — Service rewrite: chart(), array quote(), instanceof HTTPError, setGlobalConfig, null-preserving types (YF-01/02/03/06/07)
+- [x] 02-01-PLAN.md — Service rewrite: chart(), array quote(), instanceof HTTPError, setGlobalConfig, null-preserving types (YF-01/02/03/06/07)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -103,6 +103,6 @@ Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phas
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
-| 2. Yahoo Finance Migration | 1/4 | In Progress|  |
+| 2. Yahoo Finance Migration | 2/4 | In Progress|  |
 | 3. Static Export Hardening | 0/TBD | Not started | - |
 | 4. Auth Removal | 0/TBD | Not started | - |
