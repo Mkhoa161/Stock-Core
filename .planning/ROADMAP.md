@@ -14,7 +14,7 @@ Stock-Core is a brownfield fix completing a mid-migration S&P 500 dashboard. The
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Database Foundation** - Stabilize the connection layer and data access patterns as prerequisite for all concurrent writes
-- [ ] **Phase 2: Yahoo Finance Migration** - Complete the data pipeline so Lambda collects all 500 tickers reliably within the 15-min timeout
+- [x] **Phase 2: Yahoo Finance Migration** - Complete the data pipeline so Lambda collects all 500 tickers reliably within the 15-min timeout (completed 2026-05-20)
 - [ ] **Phase 3: Static Export Hardening** - Make next build hermetically generate all 500 pre-rendered pages every time
 - [ ] **Phase 4: Auth Removal** - Delete all auth dead code so the codebase compiles clean as a public read-only dashboard
 
@@ -64,7 +64,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03-PLAN.md — Lambda rewrite: stale-only profiles + historical, batched market data, remove double-delay (YF-04/05/08/09)
+- [x] 02-03-PLAN.md — Lambda rewrite: stale-only profiles + historical, batched market data, remove double-delay (YF-04/05/08/09)
 
 ### Phase 3: Static Export Hardening
 
@@ -78,8 +78,16 @@ Plans:
   3. Navigating to an unknown route on the S3-deployed site returns a 404 page (not a blank S3 XML error response)
   4. No ticker page returns a 404 after a clean deploy of the full build output
 
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+Plans:
+**Wave 1** *(parallel — no shared files)*
+
+- [ ] 03-01-PLAN.md — generateTickers.ts script + run to produce committed tickers.json (SE-01)
+- [ ] 03-03-PLAN.md — Terraform: private S3 + CloudFront OAC + URI-rewrite Function + custom 404 routing (SE-05)
+
+**Wave 2** *(blocked on 03-01: tickers.json must exist before next build can verify)*
+
+- [ ] 03-02-PLAN.md — Rewire generateStaticParams to read tickers.json + dynamicParams = false + not-found.tsx + build verification (SE-02, SE-03, SE-04, SE-05)
 
 ### Phase 4: Auth Removal
 
@@ -103,6 +111,6 @@ Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phas
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
-| 2. Yahoo Finance Migration | 3/4 | In Progress|  |
-| 3. Static Export Hardening | 0/TBD | Not started | - |
+| 2. Yahoo Finance Migration | 4/4 | Complete   | 2026-05-20 |
+| 3. Static Export Hardening | 0/3 | Not started | - |
 | 4. Auth Removal | 0/TBD | Not started | - |
