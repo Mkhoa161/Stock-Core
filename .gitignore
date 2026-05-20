@@ -1,0 +1,10 @@
+
+# GSD planning docs (local only)
+.planning/
+
+# Terraform state files (must not be committed — may contain sensitive infra config)
+**/*.tfstate
+**/*.tfstate.backup
+
+# Terraform provider cache (auto-downloaded by terraform init)
+**/.terraform/
