@@ -1,4 +1,4 @@
-import { fmpService } from './fmpService';
+import { yahooFinanceService } from './yahooFinanceService';
 import { companyService } from './companyService';
 import dbInterface from '../config/database';
 import * as dotenv from 'dotenv';
@@ -28,8 +28,9 @@ export interface HistoricalDataResponse {
 }
 
 export class HistoricalDataService {
-  private readonly DEFAULT_DAYS = 60;
-  private readonly MAX_DAYS = 60; // Hard limit for API calls
+  private readonly DEFAULT_DAYS = 60;   // Keep: backward compat for frontend API
+  private readonly MAX_DAYS = 365;      // Changed: 1 year of storage
+  private readonly CLEANUP_DAYS = 400;  // New: 35-day headroom above MAX_DAYS
 
   /**
    * Get historical data for a company with lazy loading
@@ -84,8 +85,8 @@ export class HistoricalDataService {
         };
       }
       
-      // Step 2: Database doesn't have complete data, fetch from FMP
-      console.log(`🔄 Database has incomplete data (${dbData.length} days), fetching from FMP...`);
+      // Step 2: Database doesn't have complete data, fetch from Yahoo Finance
+      console.log(`🔄 Database has incomplete data (${dbData.length} days), fetching from Yahoo Finance...`);
       
       // Use FMP's native date range support
       const apiData = await this.fetchHistoricalDataFromAPI(ticker, requestedDays, fromDate, toDate);
@@ -153,6 +154,8 @@ export class HistoricalDataService {
       return false;
     }
 
+    const toDateStr = (d: Date): string => d.toISOString().slice(0, 10); // YYYY-MM-DD UTC
+
     // Sort data by date to ensure proper order
     const sortedData = dbData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
@@ -162,8 +165,8 @@ export class HistoricalDataService {
     
     // For custom date range (from/to), check if we have data from start to end
     if (startDate && endDate) {
-      const hasStartData = firstDate <= startDate;
-      const hasEndData = lastDate >= endDate;
+      const hasStartData = toDateStr(firstDate) <= toDateStr(startDate);
+      const hasEndData   = toDateStr(lastDate)  >= toDateStr(endDate);
       const hasEnoughDays = sortedData.length >= requestedDays;
       
       console.log(`🔍 Data completeness check: start=${hasStartData}, end=${hasEndData}, days=${hasEnoughDays}, actual=${sortedData.length}/${requestedDays}`);
@@ -176,7 +179,7 @@ export class HistoricalDataService {
     const expectedStartDate = new Date();
     expectedStartDate.setDate(expectedEndDate.getDate() - requestedDays);
     
-    const hasRecentData = lastDate >= expectedStartDate;
+    const hasRecentData = toDateStr(lastDate) >= toDateStr(expectedStartDate);
     const hasEnoughDays = sortedData.length >= requestedDays;
     
     console.log(`🔍 Data completeness check: recent=${hasRecentData}, days=${hasEnoughDays}, actual=${sortedData.length}/${requestedDays}, lastDate=${lastDate.toISOString().split('T')[0]}, expectedStart=${expectedStartDate.toISOString().split('T')[0]}`);
@@ -263,9 +266,6 @@ export class HistoricalDataService {
     }
   }
 
-  /**
-   * Fetch historical data from FMP API
-   */
   private async fetchHistoricalDataFromAPI(
     ticker: string, 
     days: number,
@@ -285,12 +285,12 @@ export class HistoricalDataService {
   }> {
     try {
       if (fromDate && toDate) {
-        console.log(`🌐 Fetching historical data from FMP for ${ticker} from ${fromDate} to ${toDate}...`);
+        console.log(`🌐 Fetching historical data from Yahoo Finance for ${ticker} from ${fromDate} to ${toDate}...`);
       } else {
-        console.log(`🌐 Fetching ${days} days of historical data from FMP for ${ticker}...`);
+        console.log(`🌐 Fetching ${days} days of historical data from Yahoo Finance for ${ticker}...`);
       }
       
-      const historicalData = await fmpService.getBulkHistoricalData([ticker], days, fromDate, toDate);
+      const historicalData = await yahooFinanceService.getBulkHistoricalData([ticker], days, fromDate, toDate);
       const data = historicalData[ticker];
       
       if (!data || data.length === 0) {
@@ -427,7 +427,7 @@ export class HistoricalDataService {
   async cleanupOldHistoricalData(): Promise<void> {
     try {
       const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - this.MAX_DAYS);
+      cutoffDate.setDate(cutoffDate.getDate() - this.CLEANUP_DAYS); // 400 days
       
       const query = 'DELETE FROM stock_prices WHERE date < $1';
       const result = await dbInterface.query(query, [cutoffDate]);
