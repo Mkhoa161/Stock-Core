@@ -125,8 +125,8 @@ export class CompanyService {
     }>,
   ): Promise<void> {
     const validData = data.filter(
-      (row): row is typeof row & { open: number; high: number; low: number; close: number } =>
-        row.open != null && row.high != null && row.low != null && row.close != null,
+      (row): row is typeof row & { open: number; high: number; low: number; close: number; volume: number } =>
+        row.open != null && row.high != null && row.low != null && row.close != null && row.volume != null,
     );
 
     if (validData.length === 0) return;
@@ -137,7 +137,7 @@ export class CompanyService {
     const highs: number[] = [];
     const lows: number[] = [];
     const closes: number[] = [];
-    const volumes: (number | null)[] = [];
+    const volumes: number[] = [];
 
     for (const row of validData) {
       companyIds.push(companyId);

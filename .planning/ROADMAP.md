@@ -60,7 +60,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Downstream interface cascade: widen StockPrice/upsert/HistoricalDataResponse to number|null (YF-07)
+- [x] 02-02-PLAN.md — Downstream interface cascade: widen StockPrice/upsert/HistoricalDataResponse to number|null (YF-07)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -103,6 +103,6 @@ Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phas
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
-| 2. Yahoo Finance Migration | 2/4 | In Progress|  |
+| 2. Yahoo Finance Migration | 3/4 | In Progress|  |
 | 3. Static Export Hardening | 0/TBD | Not started | - |
 | 4. Auth Removal | 0/TBD | Not started | - |
