@@ -1,8 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { fmpService } from '../services/fmpService';
+import { yahooFinanceService } from '../services/yahooFinanceService';
 import { companyService } from '../services/companyService';
 import { historicalDataService } from '../services/historicalDataService';
 import { scrapeSP500Companies } from '../scripts/scrapeSP500';
+import dbInterface from '../config/database';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -13,31 +14,12 @@ interface DailyCollectionResult {
   companiesScraped: number;
   companiesUpdated: number;
   historicalDataCollected: number;
-  apiCallsUsed: number;
-  apiCallsRemaining: number;
   errors: string[];
   timestamp: string;
 }
 
 class DailyDataCollector {
-  private apiCallCounter = 0;
-  private readonly DAILY_LIMIT = 250;
   private readonly errors: string[] = [];
-
-  /**
-   * Track API calls made during this execution
-   */
-  private incrementApiCalls(count: number = 1): void {
-    this.apiCallCounter += count;
-    console.log(`📊 API calls used: ${this.apiCallCounter}/${this.DAILY_LIMIT}`);
-  }
-
-  /**
-   * Get remaining API calls for today
-   */
-  private getRemainingCalls(): number {
-    return Math.max(0, this.DAILY_LIMIT - this.apiCallCounter);
-  }
 
   /**
    * Step 1: Scrape S&P 500 companies from Wikipedia
@@ -45,15 +27,15 @@ class DailyDataCollector {
   async scrapeSP500Companies(): Promise<number> {
     try {
       console.log('🔍 Step 1: Scraping S&P 500 companies from Wikipedia...');
-      
+
       const scrapedCompanies = await scrapeSP500Companies();
       let companiesAdded = 0;
-      
+
       for (const company of scrapedCompanies) {
         try {
           // Check if company already exists
           const existing = await companyService.getCompanyByTicker(company.ticker);
-          
+
           if (!existing) {
             await companyService.createCompany({
               ticker: company.ticker,
@@ -72,10 +54,10 @@ class DailyDataCollector {
           this.errors.push(errorMsg);
         }
       }
-      
+
       console.log(`✅ Step 1 completed: ${companiesAdded} new companies added`);
       return companiesAdded;
-      
+
     } catch (error: any) {
       const errorMsg = `Failed to scrape S&P 500: ${error.message}`;
       console.error(`❌ ${errorMsg}`);
@@ -85,99 +67,112 @@ class DailyDataCollector {
   }
 
   /**
-   * Step 2: Update company profiles and collect current market data for dashboard
+   * Returns tickers with missing or empty sector/industry (YF-04).
+   * Used by Step 2 to limit profile fetching to stale companies only.
+   */
+  private async getStaleProfileTickers(): Promise<string[]> {
+    const result = await dbInterface.query(
+      `SELECT ticker FROM companies WHERE sector IS NULL OR sector = '' OR industry IS NULL OR industry = ''`,
+    );
+    return result.rows.map((r: { ticker: string }) => r.ticker);
+  }
+
+  /**
+   * Returns tickers whose newest stock_prices row is missing or older than 7 days (YF-05).
+   * Used by Step 3 to limit historical collection to stale companies only.
+   */
+  private async getStaleHistoricalTickers(): Promise<string[]> {
+    const result = await dbInterface.query(
+      `SELECT c.ticker
+       FROM companies c
+       LEFT JOIN (
+         SELECT company_id, MAX(date) AS max_date
+         FROM stock_prices
+         GROUP BY company_id
+       ) sp ON c.id = sp.company_id
+       WHERE sp.max_date IS NULL OR sp.max_date < NOW() - INTERVAL '7 days'
+       ORDER BY c.ticker`,
+    );
+    return result.rows.map((r: { ticker: string }) => r.ticker);
+  }
+
+  /**
+   * Step 2: Update company profiles (stale-only) and collect current market data (all tickers).
+   *
+   * Profile fetch: only for tickers returned by getStaleProfileTickers() via getBulkCompanyProfiles.
+   * Market data fetch: all tickers via batched getBulkQuotes (one call per 50 symbols, 2s inter-batch
+   * gap inside the service). The per-symbol getCombinedCompanyData loop and the 5s inter-batch
+   * delay (double-delay YF-09) are both removed.
    */
   async updateCompanyProfilesAndMarketData(): Promise<number> {
     try {
       console.log('🏢 Step 2: Updating company profiles and collecting market data...');
-      
-      // Get all companies from database
+
       const allCompanies = await companyService.getAllCompanies();
-      
-      // Filter companies that need profile updates (missing sector/industry)
-      const companiesNeedingUpdate = allCompanies.filter(company => 
-        !company.sector || !company.industry || company.sector === '' || company.industry === ''
-      );
-      
-      console.log(`📊 Found ${companiesNeedingUpdate.length} companies needing profile updates`);
-      
+      const allTickers = allCompanies.map(c => c.ticker);
+
       let profilesUpdated = 0;
       let marketDataUpdated = 0;
-      
-      // Process all companies for market data (dashboard needs current prices, changes, etc.)
-      const allTickers = allCompanies.map(c => c.ticker);
-      
-      // Process in batches of 10 (FMP limit)
-      const batchSize = 10;
-      for (let i = 0; i < allTickers.length; i += batchSize) {
-        const batch = allTickers.slice(i, i + batchSize);
-        
-        // Check if we have enough API calls
-        if (this.getRemainingCalls() < 1) {
-          console.log('⚠️ No API calls remaining for market data updates');
-          break;
-        }
-        
-        try {
-          console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(allTickers.length / batchSize)}`);
-          
-          // Get combined company data (profiles + quotes) using the efficient method
-          const combinedData = await fmpService.getCombinedCompanyData(batch);
-          this.incrementApiCalls(1);
-          
-          // Process each company's data
-          for (const data of combinedData) {
-            try {
-              const company = allCompanies.find(c => c.ticker === data.symbol);
-              if (!company) continue;
-              
-              // Update profile if needed
-              const needsProfileUpdate = companiesNeedingUpdate.find(c => c.ticker === data.symbol);
-              if (needsProfileUpdate && (data.sector || data.industry)) {
-                await companyService.updateCompanyProfile(company.id, {
-                  sector: data.sector,
-                  industry: data.industry,
-                  name: data.companyName
-                });
-                console.log(`✅ Updated profile for ${data.symbol}: ${data.companyName}`);
-                profilesUpdated++;
-              }
-              
-              // Update market data for dashboard
-              if (data.price && data.price > 0) {
-                await companyService.updateCompanyMarketData(company.id, {
-                  price: data.price,
-                  change: data.change,
-                  changePercent: data.changePercent,
-                  volume: data.volume,
-                  marketCap: data.marketCap
-                });
-                console.log(`📈 Updated market data for ${data.symbol}: $${data.price} (${data.changePercent}%)`);
-                marketDataUpdated++;
-              }
-              
-            } catch (error: any) {
-              const errorMsg = `Error processing ${data.symbol}: ${error.message}`;
-              console.error(`❌ ${errorMsg}`);
-              this.errors.push(errorMsg);
+
+      // --- Profile fetch: stale-only (YF-04) ---
+      const staleTickers = await this.getStaleProfileTickers();
+      console.log(`📊 Found ${staleTickers.length} companies needing profile updates`);
+
+      if (staleTickers.length > 0) {
+        const profiles = await yahooFinanceService.getBulkCompanyProfiles(staleTickers);
+        for (const profile of profiles) {
+          try {
+            const company = allCompanies.find(c => c.ticker === profile.symbol);
+            if (!company) continue;
+
+            if (profile.sector || profile.industry) {
+              await companyService.updateCompanyProfile(company.id, {
+                sector: profile.sector,
+                industry: profile.industry,
+                name: profile.companyName
+              });
+              console.log(`✅ Updated profile for ${profile.symbol}: ${profile.companyName}`);
+              profilesUpdated++;
             }
+          } catch (error: any) {
+            const errorMsg = `Error updating profile for ${profile.symbol}: ${error.message}`;
+            console.error(`❌ ${errorMsg}`);
+            this.errors.push(errorMsg);
           }
-          
-          // Add delay between batches
-          if (i + batchSize < allTickers.length) {
-            await this.delay(1000);
-          }
-          
+        }
+      }
+
+      // --- Market data fetch: all tickers via getBulkQuotes (YF-09 double-delay removed) ---
+      console.log(`📈 Fetching market data for all ${allTickers.length} tickers via batched getBulkQuotes...`);
+      const quotes = await yahooFinanceService.getBulkQuotes(allTickers);
+
+      for (const quote of quotes) {
+        try {
+          // T-02-10: skip the write entirely when price is null — do not zero-fill
+          if (quote.price == null) continue;
+
+          const company = allCompanies.find(c => c.ticker === quote.symbol);
+          if (!company) continue;
+
+          await companyService.updateCompanyMarketData(company.id, {
+            price: quote.price,
+            change: quote.change ?? 0,
+            changePercent: quote.changePercent ?? 0,
+            volume: quote.volume ?? 0,
+            marketCap: quote.marketCap ?? 0
+          });
+          console.log(`📈 Updated market data for ${quote.symbol}: $${quote.price} (${quote.changePercent}%)`);
+          marketDataUpdated++;
         } catch (error: any) {
-          const errorMsg = `Error processing batch: ${error.message}`;
+          const errorMsg = `Error processing market data for ${quote.symbol}: ${error.message}`;
           console.error(`❌ ${errorMsg}`);
           this.errors.push(errorMsg);
         }
       }
-      
+
       console.log(`✅ Step 2 completed: ${profilesUpdated} profiles updated, ${marketDataUpdated} market data records updated`);
       return profilesUpdated + marketDataUpdated;
-      
+
     } catch (error: any) {
       const errorMsg = `Failed to update company profiles and market data: ${error.message}`;
       console.error(`❌ ${errorMsg}`);
@@ -187,70 +182,60 @@ class DailyDataCollector {
   }
 
   /**
-   * Step 3: Collect historical data for remaining API calls
+   * Step 3: Collect historical data for stale tickers only (YF-05).
+   * Sources tickers from getStaleHistoricalTickers() — companies with missing or >7-day-old data.
+   * Uses 365-day retention to match Phase 1 database cleanup window.
    */
   async collectHistoricalData(): Promise<number> {
     try {
-      console.log('📈 Step 3: Collecting historical data with remaining API calls...');
-      
-      const remainingCalls = this.getRemainingCalls();
-      console.log(`📊 Remaining API calls: ${remainingCalls}`);
-      
-      if (remainingCalls === 0) {
-        console.log('⚠️ No API calls remaining for historical data');
+      console.log('📈 Step 3: Collecting historical data...');
+
+      const staleTickers = await this.getStaleHistoricalTickers();
+
+      if (staleTickers.length === 0) {
+        console.log('✅ Step 3: No stale historical data — all tickers up to date, skipping.');
         return 0;
       }
-      
-      // Get all companies from database
+
+      console.log(`📈 Found ${staleTickers.length} companies needing historical data collection`);
+
+      // Cache company list once for id lookup
       const allCompanies = await companyService.getAllCompanies();
-      
-      // Select companies that need historical data (prioritize popular ones)
-      const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'ADBE', 'CRM'];
-      const selectedCompanies = allCompanies.filter(company => 
-        popularTickers.includes(company.ticker)
-      ).slice(0, remainingCalls);
-      
-      console.log(`📈 Selected ${selectedCompanies.length} companies for historical data collection`);
-      
+
       let historicalDataCollected = 0;
-      
-      for (const company of selectedCompanies) {
+
+      for (const ticker of staleTickers) {
         try {
-          // Check if we still have API calls
-          if (this.getRemainingCalls() < 1) {
-            console.log('⚠️ No more API calls remaining');
-            break;
+          const company = allCompanies.find(c => c.ticker === ticker);
+          if (!company) {
+            console.log(`⚠️ Company not found in DB for ticker ${ticker}, skipping`);
+            continue;
           }
-          
-          console.log(`📈 Collecting historical data for ${company.ticker}...`);
-          
-          // Get historical data (60 days)
-          const historicalData = await fmpService.getBulkHistoricalData([company.ticker], 60);
-          this.incrementApiCalls(1);
-          
-          const data = historicalData[company.ticker];
+
+          console.log(`📈 Collecting historical data for ${ticker}...`);
+
+          // 365-day retention to match Phase 1 cleanup window (not the old hardcoded 60)
+          const historicalData = await yahooFinanceService.getBulkHistoricalData([ticker], 365);
+
+          const data = historicalData[ticker];
           if (data && data.length > 0) {
-            // Store historical data
             await companyService.updateCompanyHistoricalData(company.id, data);
             historicalDataCollected++;
-            console.log(`✅ Collected ${data.length} days of historical data for ${company.ticker}`);
+            console.log(`✅ Collected ${data.length} days of historical data for ${ticker}`);
           } else {
-            console.log(`⚠️ No historical data available for ${company.ticker}`);
+            console.log(`⚠️ No historical data available for ${ticker}`);
           }
-          
-          // Add delay between requests
-          await this.delay(100);
-          
+
         } catch (error: any) {
-          const errorMsg = `Error collecting historical data for ${company.ticker}: ${error.message}`;
+          const errorMsg = `Error collecting historical data for ${ticker}: ${error.message}`;
           console.error(`❌ ${errorMsg}`);
           this.errors.push(errorMsg);
         }
       }
-      
+
       console.log(`✅ Step 3 completed: ${historicalDataCollected} companies updated with historical data`);
       return historicalDataCollected;
-      
+
     } catch (error: any) {
       const errorMsg = `Failed to collect historical data: ${error.message}`;
       console.error(`❌ ${errorMsg}`);
@@ -261,64 +246,70 @@ class DailyDataCollector {
 
   /**
    * Main execution function
+   *
+   * Timing budget (YF-08): This pipeline stays well within the 15-minute Lambda timeout because:
+   *   (a) Market data (Step 2) uses one batched getBulkQuotes call per 50 tickers with a single 2s
+   *       inter-batch gap — 500 tickers = 10 batches × ~1s HTTP + 9 × 2s gaps ≈ 28s.
+   *   (b) The per-symbol 1.5s loop (getCombinedCompanyData) is removed.
+   *   (c) The 5s inter-batch delay (YF-09 double-delay) is removed.
+   *   (d) Profile and historical collection run only for stale companies (YF-04/YF-05), not all 500.
+   *   (e) Historical fetches share the concurrency-5 queue from setGlobalConfig — no extra sleeps.
+   *
+   * Manual timing measurement: run `npm run test:lambda` with a warm DB (all 500 tickers present,
+   * historical data <7 days old) and confirm total duration is under 90s. On a cold DB (no data)
+   * confirm under 6 minutes. See VALIDATION.md Manual-Only Verifications (YF-08).
    */
   async execute(): Promise<DailyCollectionResult> {
     console.log('🚀 Starting daily data collection...');
     console.log(`📅 Date: ${new Date().toISOString()}`);
-    
+
     const startTime = Date.now();
-    
+
     try {
       // Step 1: Scrape S&P 500 companies
       const companiesScraped = await this.scrapeSP500Companies();
-      
-      // Step 2: Update company profiles and market data
+
+      // Step 2: Update company profiles (stale-only) and market data (all tickers, batched)
       const companiesUpdated = await this.updateCompanyProfilesAndMarketData();
-      
-      // Step 3: Collect historical data
+
+      // Step 3: Collect historical data (stale-only, >7 days old or missing)
       const historicalDataCollected = await this.collectHistoricalData();
-      
+
       // Step 4: Clean up old historical data
       await this.cleanupOldHistoricalData();
-      
+
       const executionTime = Date.now() - startTime;
-      
+
       const result: DailyCollectionResult = {
         success: this.errors.length === 0,
         companiesScraped,
         companiesUpdated,
         historicalDataCollected,
-        apiCallsUsed: this.apiCallCounter,
-        apiCallsRemaining: this.getRemainingCalls(),
         errors: this.errors,
         timestamp: new Date().toISOString()
       };
-      
+
       console.log('🎉 Daily data collection completed!');
       console.log('📊 Summary:', {
         companiesScraped,
         companiesUpdated,
         historicalDataCollected,
-        apiCallsUsed: this.apiCallCounter,
-        apiCallsRemaining: this.getRemainingCalls(),
         executionTime: `${executionTime}ms`,
         errors: this.errors.length
       });
-      
+
       return result;
-      
+
     } catch (error: any) {
       const errorMsg = `Daily collection failed: ${error.message}`;
       console.error(`❌ ${errorMsg}`);
       this.errors.push(errorMsg);
-      
+
       return {
         success: false,
         companiesScraped: 0,
         companiesUpdated: 0,
         historicalDataCollected: 0,
-        apiCallsUsed: this.apiCallCounter,
-        apiCallsRemaining: this.getRemainingCalls(),
         errors: this.errors,
         timestamp: new Date().toISOString()
       };
@@ -331,11 +322,11 @@ class DailyDataCollector {
   async cleanupOldHistoricalData(): Promise<void> {
     try {
       console.log('🧹 Step 4: Cleaning up old historical data...');
-      
+
       await historicalDataService.cleanupOldHistoricalData();
-      
+
       console.log('✅ Step 4 completed: Old historical data cleaned up');
-      
+
     } catch (error: any) {
       const errorMsg = `Failed to cleanup old historical data: ${error.message}`;
       console.error(`❌ ${errorMsg}`);
@@ -364,7 +355,7 @@ export const handler = async (
   try {
     // Check if this is a scheduled event or manual invocation
     const isScheduledEvent = event.source === 'aws.events' || event['detail-type'] === 'Scheduled Event';
-    
+
     if (isScheduledEvent) {
       console.log('📅 Processing scheduled daily data collection event (24-hour trigger)');
     } else {
@@ -385,16 +376,14 @@ export const handler = async (
       },
       body: JSON.stringify({
         success: result.success,
-        message: result.success 
-          ? 'Daily data collection completed successfully' 
+        message: result.success
+          ? 'Daily data collection completed successfully'
           : 'Daily data collection completed with errors',
         timestamp: result.timestamp,
         summary: {
           companiesScraped: result.companiesScraped,
           companiesUpdated: result.companiesUpdated,
           historicalDataCollected: result.historicalDataCollected,
-          apiCallsUsed: result.apiCallsUsed,
-          apiCallsRemaining: result.apiCallsRemaining
         },
         errors: result.errors.length > 0 ? result.errors : undefined
       })
@@ -407,7 +396,7 @@ export const handler = async (
 
   } catch (error) {
     console.error('❌ Lambda function failed:', error);
-    
+
     const errorResponse = {
       statusCode: 500,
       headers: {
