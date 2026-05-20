@@ -82,7 +82,7 @@ describe('Database Operations Tests', () => {
       const created = await companyService.createStockPrice(stockPriceData);
       expect(created).toBeDefined();
       expect(created.company_id).toBe(company.id);
-      expect(parseFloat(created.close_price.toString())).toBe(103.00);
+      expect(parseFloat((created.close_price ?? 0).toString())).toBe(103.00);
 
       console.log('✅ Stock price creation test passed');
     });

@@ -117,15 +117,16 @@ export class CompanyService {
     companyId: number,
     data: Array<{
       date: string;
-      open: number;
-      high: number;
-      low: number;
-      close: number;
-      volume: number;
+      open: number | null;
+      high: number | null;
+      low: number | null;
+      close: number | null;
+      volume: number | null;
     }>,
   ): Promise<void> {
     const validData = data.filter(
-      (row) => row.open != null && row.high != null && row.low != null && row.close != null,
+      (row): row is typeof row & { open: number; high: number; low: number; close: number } =>
+        row.open != null && row.high != null && row.low != null && row.close != null,
     );
 
     if (validData.length === 0) return;
@@ -136,7 +137,7 @@ export class CompanyService {
     const highs: number[] = [];
     const lows: number[] = [];
     const closes: number[] = [];
-    const volumes: number[] = [];
+    const volumes: (number | null)[] = [];
 
     for (const row of validData) {
       companyIds.push(companyId);
