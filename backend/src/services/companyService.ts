@@ -108,6 +108,80 @@ export class CompanyService {
     return result.rows[0];
   }
 
+  /**
+   * Bulk upsert stock price records using UNNEST (one statement per ticker).
+   * Filters out rows where OHLC values are null before inserting.
+   * On conflict (company_id, date), updates price data.
+   */
+  async bulkUpsertStockPrices(
+    companyId: number,
+    data: Array<{
+      date: string;
+      open: number;
+      high: number;
+      low: number;
+      close: number;
+      volume: number;
+    }>,
+  ): Promise<void> {
+    const validData = data.filter(
+      (row) => row.open != null && row.high != null && row.low != null && row.close != null,
+    );
+
+    if (validData.length === 0) return;
+
+    const companyIds: number[] = [];
+    const dates: string[] = [];
+    const opens: number[] = [];
+    const highs: number[] = [];
+    const lows: number[] = [];
+    const closes: number[] = [];
+    const volumes: number[] = [];
+
+    for (const row of validData) {
+      companyIds.push(companyId);
+      dates.push(row.date);
+      opens.push(row.open);
+      highs.push(row.high);
+      lows.push(row.low);
+      closes.push(row.close);
+      volumes.push(row.volume);
+    }
+
+    const query = `
+      INSERT INTO stock_prices (
+        company_id, date, open_price, high_price, low_price, close_price, volume, market_cap, created_at
+      )
+      SELECT
+        u.company_id,
+        u.date,
+        u.open_price,
+        u.high_price,
+        u.low_price,
+        u.close_price,
+        u.volume,
+        0,
+        NOW()
+      FROM UNNEST(
+        $1::int[],
+        $2::date[],
+        $3::numeric[],
+        $4::numeric[],
+        $5::numeric[],
+        $6::numeric[],
+        $7::bigint[]
+      ) AS u(company_id, date, open_price, high_price, low_price, close_price, volume)
+      ON CONFLICT (company_id, date) DO UPDATE SET
+        open_price  = EXCLUDED.open_price,
+        high_price  = EXCLUDED.high_price,
+        low_price   = EXCLUDED.low_price,
+        close_price = EXCLUDED.close_price,
+        volume      = EXCLUDED.volume
+    `;
+
+    await dbInterface.query(query, [companyIds, dates, opens, highs, lows, closes, volumes]);
+  }
+
   async createDailySummary(summaryData: CreateDailySummaryInput): Promise<DailySummary> {
     const query = `
       INSERT INTO daily_summaries (company_id, date, price, day_change, day_change_percent, market_cap, volume, created_at)
@@ -183,47 +257,8 @@ export class CompanyService {
     volume: number;
   }>): Promise<void> {
     try {
-      let recordsCreated = 0;
-      
-      // Process each day's data
-      for (let i = 0; i < historicalData.length; i++) {
-        const dayData = historicalData[i];
-        if (!dayData) continue;
-        
-        const date = new Date(dayData.date);
-        const open = dayData.open;
-        const high = dayData.high;
-        const low = dayData.low;
-        const close = dayData.close;
-        const volume = dayData.volume;
-        
-        if (open && high && low && close) {
-          try {
-            // Create stock price record
-            await this.createStockPrice({
-              company_id: companyId,
-              date,
-              open_price: open,
-              high_price: high,
-              low_price: low,
-              close_price: close,
-              volume,
-              market_cap: 0 // Will be updated with current market cap
-            });
-            
-            recordsCreated++;
-          } catch (error: any) {
-            // Skip if record already exists (unique constraint)
-            if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('duplicate key')) {
-              // Record already exists, skip
-            } else {
-              throw error;
-            }
-          }
-        }
-      }
-      
-      console.log(`✅ Updated historical data for company ${companyId}: ${recordsCreated} records`);
+      await this.bulkUpsertStockPrices(companyId, historicalData);
+      console.log(`✅ Updated historical data for company ${companyId}: ${historicalData.length} records`);
     } catch (error) {
       console.error(`❌ Error updating historical data for company ${companyId}:`, error);
       throw error;
