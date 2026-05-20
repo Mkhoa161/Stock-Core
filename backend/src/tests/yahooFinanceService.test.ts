@@ -2,8 +2,9 @@
 jest.mock('../config/database', () => ({
   query: jest.fn(),
 }));
-// Mock yahoo-finance2 default export
+// Mock yahoo-finance2 default export — __esModule:true required for ts-jest default import resolution
 jest.mock('yahoo-finance2', () => ({
+  __esModule: true,
   default: {
     setGlobalConfig: jest.fn(),
     quote: jest.fn(),
