@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-05-20T06:16:31.151Z"
+status: verifying
+stopped_at: Phase 3 context gathered
+last_updated: "2026-05-20T19:10:30.229Z"
 last_activity: 2026-05-20
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 5
-  percent: 25
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 8
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Every S&P 500 ticker shows accurate market data and a working historical price chart.
-**Current focus:** Phase 02 — yahoo-finance-migration
+**Current focus:** Phase 03 — static-export-hardening
 
 ## Current Position
 
-Phase: 02 (yahoo-finance-migration) — IN PROGRESS ◆
-Plan: 3 of 4
-Status: Ready to execute
+Phase: 02 (yahoo-finance-migration) — COMPLETE ✓
+Plan: 4 of 4
+Status: Phase complete — ready for verification
 Last activity: 2026-05-20
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [████████░░] 83%
 *Updated after each plan completion*
 | Phase 02 P00 | 15 | 2 tasks | 3 files |
 | Phase 02-yahoo-finance-migration P01 | 20 | 3 tasks | 2 files |
+| Phase 02-yahoo-finance-migration P03 | 15 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,7 @@ Recent decisions affecting current work:
 - [Phase ?]: withRetry signature changed from (label, fn) to (fn, retries?) — label arg dropped, recursive call
 - [Phase ?]: changePercent PERCENT units confirmed — getBulkQuotes passthrough correct; getCombinedCompanyData x100 removed
 - [Phase ?]: HTTPError via yahooFinance.errors['HTTPError'] — subpath import fails under nodenext
+- [Phase ?]: getBulkCompanyProfiles used for stale-only profile fetch; getCompanyProfile singular does not exist
 
 ### Pending Todos
 
@@ -77,9 +79,9 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 2]: `regularMarketChangePercent` scaling: verify empirically whether quote() already returns percent units (research flagged this as open question — test with `npx yahoo-finance2 quote AAPL` before touching change-percent fields)
-- [Phase 2]: Lambda time budget is arithmetic estimate — measure actual duration on first full run
 - [Phase 3]: Build time for 500 pages is estimated at 60-120s — measure on first full build
+- [Phase 2 resolved]: regularMarketChangePercent is PERCENT units (empirically verified Wave 0)
+- [Phase 2 resolved]: Lambda time budget — double-delay removed, batched getBulkQuotes; measure on first full run
 
 ## Deferred Items
 
@@ -92,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-20T06:16:31.143Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-05-20T19:10:30.222Z
+Stopped at: Phase 3 context gathered
 Resume file: None

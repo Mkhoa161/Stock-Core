@@ -19,20 +19,20 @@
 - [x] **YF-01**: All yahoo-finance2 calls go through a single shared instance configured with `{ queue: { concurrency: 5 } }`
 - [x] **YF-02**: Daily market data (price, change, volume, market cap) for all 500 S&P 500 companies is fetched via batched `quote()` calls (50 symbols/batch, 2s between batches) — eliminates the 500×1.5s sequential loop
 - [x] **YF-03**: Historical price data uses `chart()` instead of the deprecated `historical()` — response mapped from `result.quotes[]`
-- [ ] **YF-04**: Company profile data (sector, industry) is fetched only for companies with missing or stale profiles via `quoteSummary(symbol, {modules:['assetProfile','price']})`
-- [ ] **YF-05**: Historical data is collected only for companies whose data is stale (> 7 days old) — not all 500 on every run
+- [x] **YF-04**: Company profile data (sector, industry) is fetched only for companies with missing or stale profiles via `quoteSummary(symbol, {modules:['assetProfile','price']})`
+- [x] **YF-05**: Historical data is collected only for companies whose data is stale (> 7 days old) — not all 500 on every run
 - [x] **YF-06**: `withRetry` checks error type via `instanceof` — retries on 429, skips retry on 404 (delisted tickers)
 - [x] **YF-07**: All price/volume/marketCap fields return `null` (not `0`) when Yahoo Finance returns no data — interfaces updated to `number | null`
-- [ ] **YF-08**: Lambda daily collector completes all 5 steps within 15 minutes for all 500 S&P 500 companies
-- [ ] **YF-09**: Inter-batch sleep in `dailyDataCollector` removed (the double-delay bug is fixed)
+- [x] **YF-08**: Lambda daily collector completes all 5 steps within 15 minutes for all 500 S&P 500 companies
+- [x] **YF-09**: Inter-batch sleep in `dailyDataCollector` removed (the double-delay bug is fixed)
 
 ### Static Export
 
-- [ ] **SE-01**: A committed `frontend/src/data/tickers.json` file lists all S&P 500 tickers — build does not depend on live API availability
+- [x] **SE-01**: A committed `frontend/src/data/tickers.json` file lists all S&P 500 tickers — build does not depend on live API availability
 - [ ] **SE-02**: `generateStaticParams` in `[ticker]/page.tsx` reads from `tickers.json` — generates all 500 company pages at build time
 - [ ] **SE-03**: `export const dynamicParams = false` is set on the `[ticker]` route
 - [ ] **SE-04**: `next build` produces at least 490 files in `out/company/*/index.html` (verifiable post-build)
-- [ ] **SE-05**: S3 error document is configured to serve `404.html` for unknown routes
+- [x] **SE-05**: S3 error document is configured to serve `404.html` for unknown routes
 
 ### Auth Removal
 
@@ -90,17 +90,17 @@
 | YF-01 | Phase 2: Yahoo Finance Migration | Complete |
 | YF-02 | Phase 2: Yahoo Finance Migration | Complete |
 | YF-03 | Phase 2: Yahoo Finance Migration | Complete |
-| YF-04 | Phase 2: Yahoo Finance Migration | Pending |
-| YF-05 | Phase 2: Yahoo Finance Migration | Pending |
+| YF-04 | Phase 2: Yahoo Finance Migration | Complete |
+| YF-05 | Phase 2: Yahoo Finance Migration | Complete |
 | YF-06 | Phase 2: Yahoo Finance Migration | Complete |
 | YF-07 | Phase 2: Yahoo Finance Migration | Complete |
-| YF-08 | Phase 2: Yahoo Finance Migration | Pending |
-| YF-09 | Phase 2: Yahoo Finance Migration | Pending |
-| SE-01 | Phase 3: Static Export Hardening | Pending |
+| YF-08 | Phase 2: Yahoo Finance Migration | Complete |
+| YF-09 | Phase 2: Yahoo Finance Migration | Complete |
+| SE-01 | Phase 3: Static Export Hardening | Complete |
 | SE-02 | Phase 3: Static Export Hardening | Pending |
 | SE-03 | Phase 3: Static Export Hardening | Pending |
 | SE-04 | Phase 3: Static Export Hardening | Pending |
-| SE-05 | Phase 3: Static Export Hardening | Pending |
+| SE-05 | Phase 3: Static Export Hardening | Complete |
 | AU-01 | Phase 4: Auth Removal | Pending |
 | AU-02 | Phase 4: Auth Removal | Pending |
 | AU-03 | Phase 4: Auth Removal | Pending |

@@ -82,8 +82,8 @@ Plans:
 Plans:
 **Wave 1** *(parallel — no shared files)*
 
-- [ ] 03-01-PLAN.md — generateTickers.ts script + run to produce committed tickers.json (SE-01)
-- [ ] 03-03-PLAN.md — Terraform: private S3 + CloudFront OAC + URI-rewrite Function + custom 404 routing (SE-05)
+- [x] 03-01-PLAN.md — generateTickers.ts script + run to produce committed tickers.json (SE-01)
+- [x] 03-03-PLAN.md — Terraform: private S3 + CloudFront OAC + URI-rewrite Function + custom 404 routing (SE-05)
 
 **Wave 2** *(blocked on 03-01: tickers.json must exist before next build can verify)*
 
@@ -112,5 +112,5 @@ Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phas
 |-------|----------------|--------|-----------|
 | 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
 | 2. Yahoo Finance Migration | 4/4 | Complete   | 2026-05-20 |
-| 3. Static Export Hardening | 0/3 | Not started | - |
+| 3. Static Export Hardening | 2/3 | In Progress|  |
 | 4. Auth Removal | 0/TBD | Not started | - |
