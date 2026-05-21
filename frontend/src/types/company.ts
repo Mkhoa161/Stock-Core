@@ -12,3 +12,11 @@ export interface Company {
   created_at: string;
   updated_at: string;
 }
+
+export interface PaginatedCompaniesResponse {
+  data: Company[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

@@ -1,15 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import api from "@/lib/api";
-import { Company } from "@/types/company";
+import { Company, PaginatedCompaniesResponse } from "@/types/company";
 
-// Hook for fetching all companies
-export function useCompanies() {
-  return useQuery({
-    queryKey: ["companies"],
-    queryFn: async (): Promise<Company[]> => {
-      const data = await api.get("/api/companies/");
-      return data;
+// Hook for fetching paginated companies with optional search
+export function useCompanies(page: number = 1, search: string = "") {
+  return useQuery<PaginatedCompaniesResponse>({
+    queryKey: ["companies", page, search],
+    queryFn: async () => {
+      const params: Record<string, string> = {
+        page: page.toString(),
+        limit: "50",
+      };
+      if (search) params.search = search;
+      return api.get("/api/companies/", params);
     },
+    placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
