@@ -114,35 +114,7 @@ class DailyDataCollector {
       let profilesUpdated = 0;
       let marketDataUpdated = 0;
 
-      // --- Profile fetch: stale-only (YF-04) ---
-      const staleTickers = await this.getStaleProfileTickers();
-      console.log(`📊 Found ${staleTickers.length} companies needing profile updates`);
-
-      if (staleTickers.length > 0) {
-        const profiles = await yahooFinanceService.getBulkCompanyProfiles(staleTickers);
-        for (const profile of profiles) {
-          try {
-            const company = allCompanies.find(c => c.ticker === profile.symbol);
-            if (!company) continue;
-
-            if (profile.sector || profile.industry) {
-              await companyService.updateCompanyProfile(company.id, {
-                sector: profile.sector,
-                industry: profile.industry,
-                name: profile.companyName
-              });
-              console.log(`✅ Updated profile for ${profile.symbol}: ${profile.companyName}`);
-              profilesUpdated++;
-            }
-          } catch (error: any) {
-            const errorMsg = `Error updating profile for ${profile.symbol}: ${error.message}`;
-            console.error(`❌ ${errorMsg}`);
-            this.errors.push(errorMsg);
-          }
-        }
-      }
-
-      // --- Market data fetch: all tickers via getBulkQuotes (YF-09 double-delay removed) ---
+      // --- Market data FIRST: all tickers via getBulkQuotes (fast, ~30s for 500 tickers) ---
       console.log(`📈 Fetching market data for all ${allTickers.length} tickers via batched getBulkQuotes...`);
       const quotes = await yahooFinanceService.getBulkQuotes(allTickers);
 
@@ -167,6 +139,36 @@ class DailyDataCollector {
           const errorMsg = `Error processing market data for ${quote.symbol}: ${error.message}`;
           console.error(`❌ ${errorMsg}`);
           this.errors.push(errorMsg);
+        }
+      }
+
+      // --- Profile fetch SECOND: stale-only (YF-04), capped at 50/run to stay within timeout ---
+      // On a cold DB all 503 tickers are stale; processing 50/run keeps Step 2 under ~3 minutes.
+      const staleTickers = await this.getStaleProfileTickers();
+      const tickersToUpdate = staleTickers.slice(0, 50);
+      console.log(`📊 Found ${staleTickers.length} companies needing profile updates, processing ${tickersToUpdate.length} this run`);
+
+      if (tickersToUpdate.length > 0) {
+        const profiles = await yahooFinanceService.getBulkCompanyProfiles(tickersToUpdate);
+        for (const profile of profiles) {
+          try {
+            const company = allCompanies.find(c => c.ticker === profile.symbol);
+            if (!company) continue;
+
+            if (profile.sector || profile.industry) {
+              await companyService.updateCompanyProfile(company.id, {
+                sector: profile.sector,
+                industry: profile.industry,
+                name: profile.companyName
+              });
+              console.log(`✅ Updated profile for ${profile.symbol}: ${profile.companyName}`);
+              profilesUpdated++;
+            }
+          } catch (error: any) {
+            const errorMsg = `Error updating profile for ${profile.symbol}: ${error.message}`;
+            console.error(`❌ ${errorMsg}`);
+            this.errors.push(errorMsg);
+          }
         }
       }
 

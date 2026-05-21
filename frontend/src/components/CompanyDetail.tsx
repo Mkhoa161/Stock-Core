@@ -26,7 +26,6 @@ export function CompanyDetail({ params }: CompanyDetailProps) {
 
   const historicalData = historicalResponse?.data || [];
   const isLoading = companyLoading || historicalLoading;
-  const error = companyError || historicalError;
 
   // Filtered data for chart
   const filteredData = historicalData.filter((row) => {
@@ -88,12 +87,12 @@ export function CompanyDetail({ params }: CompanyDetailProps) {
 
 
 
-  if (error) {
+  if (companyError) {
     return (
       <div className="container mx-auto p-4">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <h1 className="text-xl font-bold text-red-800 dark:text-red-200">Error</h1>
-          <p className="text-red-600 dark:text-red-300">{error.message}</p>
+          <p className="text-red-600 dark:text-red-300">{companyError.message}</p>
         </div>
       </div>
     );
@@ -179,35 +178,45 @@ export function CompanyDetail({ params }: CompanyDetailProps) {
 
       {/* Candlestick Chart */}
       <div className="mt-6 mb-8">
-        <div ref={chartRef} style={{ width: "100%", height: 400 }} />
+        {historicalLoading ? (
+          <div className="flex items-center justify-center h-40 text-gray-500">Loading chart data...</div>
+        ) : historicalError || filteredData.length === 0 ? (
+          <div className="flex items-center justify-center h-40 border rounded bg-gray-50 dark:bg-gray-800 text-gray-400">
+            No historical price data available yet
+          </div>
+        ) : (
+          <div ref={chartRef} style={{ width: "100%", height: 400 }} />
+        )}
       </div>
 
       {/* Stock Price Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full border rounded shadow bg-white dark:bg-gray-800">
-          <thead className="bg-gray-100 dark:bg-gray-900">
-            <tr>
-              <th className="px-4 py-2 text-left">Date</th>
-              <th className="px-4 py-2 text-right">Open</th>
-              <th className="px-4 py-2 text-right">Close</th>
-              <th className="px-4 py-2 text-right">Low</th>
-              <th className="px-4 py-2 text-right">High</th>
-              <th className="px-4 py-2 text-right">Volume</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((row) => (
-              <tr key={row.date} className="border-t">
-                <td className="px-4 py-2">{formatDate(row.date)}</td>
-                <td className="px-4 py-2 text-right">{formatCurrency(row.open)}</td>
-                <td className="px-4 py-2 text-right">{formatCurrency(row.close)}</td>
-                <td className="px-4 py-2 text-right">{formatCurrency(row.low)}</td>
-                <td className="px-4 py-2 text-right">{formatCurrency(row.high)}</td>
-                <td className="px-4 py-2 text-right">{formatVolume(row.volume)}</td>
+        {filteredData.length > 0 ? (
+          <table className="min-w-full border rounded shadow bg-white dark:bg-gray-800">
+            <thead className="bg-gray-100 dark:bg-gray-900">
+              <tr>
+                <th className="px-4 py-2 text-left">Date</th>
+                <th className="px-4 py-2 text-right">Open</th>
+                <th className="px-4 py-2 text-right">Close</th>
+                <th className="px-4 py-2 text-right">Low</th>
+                <th className="px-4 py-2 text-right">High</th>
+                <th className="px-4 py-2 text-right">Volume</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredData.map((row) => (
+                <tr key={row.date} className="border-t">
+                  <td className="px-4 py-2">{formatDate(row.date)}</td>
+                  <td className="px-4 py-2 text-right">{formatCurrency(row.open)}</td>
+                  <td className="px-4 py-2 text-right">{formatCurrency(row.close)}</td>
+                  <td className="px-4 py-2 text-right">{formatCurrency(row.low)}</td>
+                  <td className="px-4 py-2 text-right">{formatCurrency(row.high)}</td>
+                  <td className="px-4 py-2 text-right">{formatVolume(row.volume)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
       </div>
     </div>
   );
