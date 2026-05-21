@@ -8,6 +8,18 @@ A public read-only S&P 500 stock tracker that collects daily market data for all
 
 Every S&P 500 ticker shows accurate market data and a working historical price chart.
 
+## Current Milestone: v1.1 Deploy & Polish
+
+**Goal:** Take the v1.0 codebase to production — full AWS backend infrastructure via Terraform, ECR-backed Docker deployment on EC2 t3.micro, GitHub Actions CI/CD triggered by version tags, and UI improvements (pagination, visual design, chart fixes, search).
+
+**Target features:**
+- Backend AWS infrastructure: VPC, ECR, RDS (db.t3.micro), EC2 (t3.micro + Elastic IP), Lambda, IAM roles — all via Terraform in `terraform/backend/`
+- Professional 2-stage Dockerfile (builder + production); clean docker-compose.yml; production compose referencing ECR
+- GitHub Actions: deploy-backend (test → ECR push → EC2 restart) + deploy-frontend (build → S3 sync → CF invalidation), triggered on version tags
+- Paginated company list API + frontend with URL-synced page state and debounced search
+- Improved visual design: sticky header, colored price changes, consistent Tailwind design tokens
+- Chart audit and fixes: correct ECharts candlestick rendering, loading skeleton, empty state
+
 ## Requirements
 
 ### Validated
@@ -31,11 +43,17 @@ Every S&P 500 ticker shows accurate market data and a working historical price c
 
 ### Active
 
-- [ ] `daily_summaries` stores extended fields: `previous_close`, `day_high`, `day_low`, `fifty_two_week_high`, `fifty_two_week_low`, `trailing_pe`, `eps`
-- [ ] Historical chart period selectors: 1M / 3M / 6M / 1Y
-- [ ] Database migration system (e.g., `node-pg-migrate`) replaces `CREATE TABLE IF NOT EXISTS` schema management
-- [ ] Structured logging replaces `console.log`/`console.error` (168 occurrences)
-- [ ] `helmet` middleware + rate limiting on data endpoints
+- [ ] Backend AWS infrastructure (VPC, ECR, RDS, EC2, Lambda, IAM) via Terraform — v1.1
+- [ ] Professional 2-stage Docker build; clean docker-compose; ECR-based production deployment — v1.1
+- [ ] GitHub Actions CI/CD: tagged releases trigger build → ECR push → EC2 restart + S3 deploy + CF invalidation — v1.1
+- ✓ Paginated company list API + frontend with URL-synced page state and debounced search — Validated in Phase 8
+- [ ] Improved visual design: sticky header, colored price changes, consistent Tailwind design tokens — v1.1
+- [ ] Chart audit and fixes: correct ECharts candlestick rendering, loading skeleton, empty state — v1.1
+- [ ] `daily_summaries` stores extended fields: `previous_close`, `day_high`, `day_low`, `fifty_two_week_high`, `fifty_two_week_low`, `trailing_pe`, `eps` — v2
+- [ ] Historical chart period selectors: 1M / 3M / 6M / 1Y — v2
+- [ ] Database migration system (e.g., `node-pg-migrate`) replaces `CREATE TABLE IF NOT EXISTS` — v2
+- [ ] Structured logging replaces `console.log`/`console.error` — v2
+- [ ] `helmet` middleware + rate limiting on data endpoints — v2
 
 ### Out of Scope
 
@@ -109,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-21 after v1.0 milestone*
+*Last updated: 2026-05-21 after v1.1 milestone initialization*
