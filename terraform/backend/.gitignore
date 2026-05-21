@@ -1,0 +1,7 @@
+# Terraform state and provider cache — contain plaintext credentials
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+*.tfvars
+*.tfvars.json
+# Note: .terraform.lock.hcl should be committed (like package-lock.json) for reproducible provider versions
