@@ -48,6 +48,18 @@ export class YahooFinanceService {
     try {
       return await fn();
     } catch (error) {
+      // Yahoo Finance sometimes returns HTTP 200 with "Too Many Requests" as plain text,
+      // causing a SyntaxError when the library tries to JSON.parse it.
+      if (
+        error instanceof SyntaxError &&
+        error.message.includes('Too Many Requests') &&
+        retries > 0
+      ) {
+        const backoffMs = BASE_DELAY_MS * (MAX_RETRIES - retries + 2);
+        console.warn(`⚠️ Rate limited (plain text 429) — retry in ${backoffMs}ms (${retries} left)`);
+        await this.delay(backoffMs);
+        return this.withRetry(fn, retries - 1);
+      }
       const HTTPError = yahooFinance.errors['HTTPError'];
       if (error instanceof HTTPError) {
         if ((error as any).code === 404) {
@@ -77,7 +89,7 @@ export class YahooFinanceService {
     for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
       const batch = symbols.slice(i, i + BATCH_SIZE);
       try {
-        const quotes = (await yahooFinance.quote(batch)) as any[];
+        const quotes = (await this.withRetry(() => yahooFinance.quote(batch))) as any[];
         for (const q of quotes) {
           results.push({
             symbol: q.symbol,
