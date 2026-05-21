@@ -11,8 +11,9 @@ mkdir -p "$BACKEND_DIR/dist"
 npx esbuild "$BACKEND_DIR/src/lambda/dailyDataCollector.ts" \
   --bundle \
   --platform=node \
-  --target=node18 \
+  --target=node20 \
   --external:pg-native \
+  --banner:js="const{File:_F}=require('buffer');if(typeof globalThis.File==='undefined'){globalThis.File=_F;}" \
   --outfile="$BACKEND_DIR/dist/lambda-handler.js"
 
 cd "$BACKEND_DIR/dist"

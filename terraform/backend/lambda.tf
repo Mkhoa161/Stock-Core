@@ -53,7 +53,7 @@ resource "aws_lambda_function" "daily_collector" {
   filename      = var.lambda_zip_path
   source_code_hash = filebase64sha256(var.lambda_zip_path)
   handler       = "lambda-handler.handler"
-  runtime       = "nodejs18.x"
+  runtime       = "nodejs20.x"
   timeout       = 900
   memory_size   = 512
   role          = aws_iam_role.lambda_execution.arn

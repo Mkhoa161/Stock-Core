@@ -37,6 +37,33 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
   }
 
+  origin {
+    domain_name = var.ec2_hostname
+    origin_id   = "ec2-backend"
+
+    custom_origin_config {
+      http_port              = 3000
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Route /api/* to the EC2 backend — must appear before the default S3 behavior
+  ordered_cache_behavior {
+    path_pattern           = "/api/*"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "ec2-backend"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = false
+
+    # CachingDisabled — never cache API responses
+    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    # AllViewerExceptHostHeader — forward query strings, headers, cookies (except Host)
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
