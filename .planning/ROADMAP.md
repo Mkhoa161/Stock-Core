@@ -1,122 +1,136 @@
 # Roadmap: Stock-Core
 
-## Overview
+## Milestones
 
-Stock-Core is a brownfield fix completing a mid-migration S&P 500 dashboard. The project repairs four compounding problems in strict dependency order: the database connection layer must be stabilized before concurrent writes can work; the Yahoo Finance integration must be fully wired before all 500 tickers can collect data; the static export must be made hermetic before all 500 pages reliably deploy; and auth dead code can be deleted independently to simplify the codebase. All four phases together deliver the core value: every S&P 500 ticker shows accurate market data and a working historical price chart.
+- ✅ **v1.0 MVP** — Phases 1-4 (shipped 2026-05-21)
+- 🚧 **v1.1 Deploy & Polish** — Phases 5-9 (in progress)
+
+---
 
 ## Phases
 
-**Phase Numbering:**
+<details>
+<summary>✅ v1.0 MVP (Phases 1-4) — SHIPPED 2026-05-21</summary>
 
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- [x] Phase 1: Database Foundation (2/2 plans) — completed 2026-05-20
+- [x] Phase 2: Yahoo Finance Migration (4/4 plans) — completed 2026-05-20
+- [x] Phase 3: Static Export Hardening (3/3 plans) — completed 2026-05-20
+- [x] Phase 4: Auth Removal (3/3 plans) — completed 2026-05-21
 
-Decimal phases appear between their surrounding integers in numeric order.
+See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
+</details>
 
-- [x] **Phase 1: Database Foundation** - Stabilize the connection layer and data access patterns as prerequisite for all concurrent writes
-- [x] **Phase 2: Yahoo Finance Migration** - Complete the data pipeline so Lambda collects all 500 tickers reliably within the 15-min timeout (completed 2026-05-20)
-- [x] **Phase 3: Static Export Hardening** - Make next build hermetically generate all 500 pre-rendered pages every time (completed 2026-05-20)
-- [x] **Phase 4: Auth Removal** - Delete all auth dead code so the codebase compiles clean as a public read-only dashboard (completed 2026-05-21)
+### 🚧 v1.1 Deploy & Polish (Phases 5-9)
+
+- [ ] **Phase 5: Backend AWS Infrastructure** — Terraform provisions full backend AWS stack (VPC, ECR, RDS, EC2, Lambda, IAM)
+- [ ] **Phase 6: Docker Image Hardening** — Professional 2-stage Dockerfile and clean compose files ready for ECR-based deployment
+- [ ] **Phase 7: CI/CD Pipelines** — GitHub Actions workflows automate backend deploy to EC2 and frontend deploy to S3 on version tags
+- [ ] **Phase 8: Pagination** — Backend and frontend support paginated company list with URL-synced state and debounced search
+- [ ] **Phase 9: Visual Polish** — UI design improvements and chart fixes bring the public dashboard to production quality
+
+---
 
 ## Phase Details
 
-### Phase 1: Database Foundation
-
-**Goal**: The database layer handles concurrent writes without connection exhaustion, stores a full year of data, and skips unnecessary API refetches
-**Depends on**: Nothing (first phase)
-**Requirements**: DB-01, DB-02, DB-03, DB-04
+### Phase 5: Backend AWS Infrastructure
+**Goal**: All backend AWS infrastructure exists in Terraform so the application can be deployed to a real environment
+**Depends on**: Nothing (first v1.1 phase; runs independently of Docker/CI/CD work)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-06, INFRA-07
 **Success Criteria** (what must be TRUE):
-
-  1. Lambda can run concurrent DB writes without hitting connection-exhaustion errors (pg.Pool replaces single pg.Client)
-  2. A full 500-ticker historical data upsert completes without N+1 INSERT statements (verified via pg query logging showing one statement per ticker)
-  3. A second Lambda run within the same day does not re-fetch data already collected that day (date comparison bug is fixed)
-  4. Historical data retention window is 1 year (365 days of price data stored, 400-day cleanup retention)
-
-**Plans**: 2 plans
+  1. `terraform apply` in `terraform/backend/` completes without error in a clean AWS account
+  2. `aws ecr describe-repositories` lists the `stock-core-backend` repository; `aws ec2 describe-instances` shows a running t3.micro with an Elastic IP
+  3. A `curl` against the EC2 Elastic IP on port 3000 reaches the backend after the user-data script starts the container on first boot
+  4. The CI/CD IAM user exists with a scoped inline policy (no admin rights); its credentials can be set as GitHub Actions secrets
+**Plans**: 5 plans
 Plans:
+- [ ] 05-01-PLAN.md — Terraform foundation: provider config, VPC (2 public + 2 private subnets), IGW, NAT GW, all security groups
+- [ ] 05-02-PLAN.md — ECR repository (stock-core-backend) + RDS PostgreSQL 14 (db.t3.micro, private subnets)
+- [ ] 05-03-PLAN.md — EC2 t3.micro with Elastic IP, IAM instance profile, SSH key pair, user-data Docker bootstrap
+- [ ] 05-04-PLAN.md — Lambda (esbuild zip, nodejs18.x, 900s timeout) + EventBridge daily schedule
+- [ ] 05-05-PLAN.md — CI/CD IAM user (scoped inline policy) + Terraform outputs file + state .gitignore
 
-- [x] 01-01-PLAN.md — Pool migration (DB-01), date completeness fix (DB-03), retention constants (DB-04), Wave 0 test scaffold
-- [x] 01-02-PLAN.md — UNNEST bulk upsert (DB-02), rewire Lambda and frontend cache write paths
-
-### Phase 2: Yahoo Finance Migration
-
-**Goal**: The Lambda daily collector successfully fetches market data and historical prices for all 500 S&P 500 companies within the 15-minute timeout with no deprecation warnings
-**Depends on**: Phase 1
-**Requirements**: YF-01, YF-02, YF-03, YF-04, YF-05, YF-06, YF-07, YF-08, YF-09
+### Phase 6: Docker Image Hardening
+**Goal**: The backend has a production-grade 2-stage Dockerfile and clean compose files so any environment can build and run the image
+**Depends on**: Nothing (parallel-eligible with Phase 5; no code dependency)
+**Requirements**: DOCK-01, DOCK-02, DOCK-03
 **Success Criteria** (what must be TRUE):
-
-  1. Lambda completes all 5 collection steps for all 500 tickers in under 6 minutes on a fresh database (under 90 seconds on a warm database)
-  2. Backend logs show zero Yahoo Finance deprecation warnings during a full collection run (chart() replaces deprecated historical())
-  3. A 429 rate-limit response triggers retry with backoff; a 404 (delisted ticker) skips retry without crashing (withRetry uses instanceof error checks)
-  4. Price, volume, and market cap fields return null (not 0) in the API response when Yahoo Finance returns no data — no $0.00 masking of real outages
-  5. Second Lambda run on the same day only refetches companies with stale profiles or stale historical data (not all 500)
-
-**Plans**: 4 plans
+  1. `docker build -f backend/Dockerfile .` produces a working image; `docker run` starts the Express server without error
+  2. Production image contains only `dist/` and production `node_modules` — no TypeScript source, no devDependencies in the final layer
+  3. `backend/docker-compose.yml` starts the local dev stack cleanly with no auth-related env vars present
+  4. `backend/docker-compose.prod.yml` references the ECR image via `IMAGE_URI` env var with no hardcoded registry URL
+**Plans**: 5 plans
 Plans:
-**Wave 1**
+- [ ] 05-01-PLAN.md — Terraform foundation: provider config, VPC (2 public + 2 private subnets), IGW, NAT GW, all security groups
+- [ ] 05-02-PLAN.md — ECR repository (stock-core-backend) + RDS PostgreSQL 14 (db.t3.micro, private subnets)
+- [ ] 05-03-PLAN.md — EC2 t3.micro with Elastic IP, IAM instance profile, SSH key pair, user-data Docker bootstrap
+- [ ] 05-04-PLAN.md — Lambda (esbuild zip, nodejs18.x, 900s timeout) + EventBridge daily schedule
+- [ ] 05-05-PLAN.md — CI/CD IAM user (scoped inline policy) + Terraform outputs file + state .gitignore
 
-- [x] 02-00-PLAN.md — Wave 0: empirical verification (changePercent unit, HTTPError import path) + test scaffolds
-- [x] 02-01-PLAN.md — Service rewrite: chart(), array quote(), instanceof HTTPError, setGlobalConfig, null-preserving types (YF-01/02/03/06/07)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 02-02-PLAN.md — Downstream interface cascade: widen StockPrice/upsert/HistoricalDataResponse to number|null (YF-07)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 02-03-PLAN.md — Lambda rewrite: stale-only profiles + historical, batched market data, remove double-delay (YF-04/05/08/09)
-
-### Phase 3: Static Export Hardening
-
-**Goal**: next build always generates pre-rendered pages for all 500 S&P 500 companies without depending on live API availability at build time
-**Depends on**: Phase 2
-**Requirements**: SE-01, SE-02, SE-03, SE-04, SE-05
+### Phase 7: CI/CD Pipelines
+**Goal**: Pushing a version tag to GitHub automatically builds, tests, and deploys both backend and frontend to AWS
+**Depends on**: Phase 5 (ECR repository, EC2 instance, and CI/CD IAM user must exist), Phase 6 (Dockerfile must be production-ready)
+**Requirements**: CICD-01, CICD-02, CICD-03, CICD-04
 **Success Criteria** (what must be TRUE):
-
-  1. `next build` succeeds and produces at least 490 files under `out/company/*/index.html` (verified by file count assertion)
-  2. `next build` completes successfully even when the backend API is unreachable (build reads from committed tickers.json, not live API)
-  3. Navigating to an unknown route on the S3-deployed site returns a 404 page (not a blank S3 XML error response)
-  4. No ticker page returns a 404 after a clean deploy of the full build output
-
-**Plans**: 3 plans
+  1. Pushing a `v*.*` git tag triggers `deploy-backend.yml`; the workflow runs `npm test`, builds and pushes the Docker image to ECR (git tag + `latest`), SSHes to EC2, and restarts the container — all steps green
+  2. The same tag push triggers `deploy-frontend.yml`; the workflow builds the static export, syncs `out/` to S3, and invalidates CloudFront — new bundle visible at the CloudFront URL
+  3. A failing `npm test` result aborts the backend deploy before any image is pushed to ECR
+  4. `docs/deployment.md` documents all 7 required GitHub secrets; a developer following the doc can configure a fresh repo and trigger a successful deploy
+**Plans**: 5 plans
 Plans:
-**Wave 1** *(parallel — no shared files)*
+- [ ] 05-01-PLAN.md — Terraform foundation: provider config, VPC (2 public + 2 private subnets), IGW, NAT GW, all security groups
+- [ ] 05-02-PLAN.md — ECR repository (stock-core-backend) + RDS PostgreSQL 14 (db.t3.micro, private subnets)
+- [ ] 05-03-PLAN.md — EC2 t3.micro with Elastic IP, IAM instance profile, SSH key pair, user-data Docker bootstrap
+- [ ] 05-04-PLAN.md — Lambda (esbuild zip, nodejs18.x, 900s timeout) + EventBridge daily schedule
+- [ ] 05-05-PLAN.md — CI/CD IAM user (scoped inline policy) + Terraform outputs file + state .gitignore
 
-- [x] 03-01-PLAN.md — generateTickers.ts script + run to produce committed tickers.json (SE-01)
-- [x] 03-03-PLAN.md — Terraform: private S3 + CloudFront OAC + URI-rewrite Function + custom 404 routing (SE-05)
-
-**Wave 2** *(blocked on 03-01: tickers.json must exist before next build can verify)*
-
-- [x] 03-02-PLAN.md — Rewire generateStaticParams to read tickers.json + dynamicParams = false + not-found.tsx + build verification (SE-02, SE-03, SE-04, SE-05)
-
-### Phase 4: Auth Removal
-
-**Goal**: All auth-related dead code is deleted from backend and frontend, leaving a clean public read-only dashboard that compiles without errors
-**Depends on**: Nothing (can run independently of Phases 2 and 3)
-**Requirements**: AU-01, AU-02, AU-03, AU-04, AU-05, AU-06, AU-07, AU-08
+### Phase 8: Pagination
+**Goal**: Users can browse all 500+ companies without loading everything at once, and can search with instant feedback
+**Depends on**: Nothing (pure API + frontend feature; no infrastructure dependency required to develop)
+**Requirements**: PAGI-01, PAGI-02, PAGI-03, PAGI-04, PAGI-05
 **Success Criteria** (what must be TRUE):
-
-  1. `npx tsc --noEmit` exits 0 in both backend and frontend with no type errors
-  2. `grep -r "useAuth\|AuthContext\|AuthGuard\|AuthProvider" frontend/src/` returns no matches
-  3. `backend/package.json` contains no passport, bcryptjs, jsonwebtoken, or cookie-parser entries (packages or @types)
-  4. The Express server starts without runtime errors related to passport initialization or missing strategies
-
-**Plans**: 3 plans
+  1. `GET /api/companies?page=2&limit=50` returns the correct company slice with response shape `{ data, total, page, limit, totalPages }`
+  2. Clicking Next/Prev navigates between pages; the URL updates to `?page=N`; refreshing at `?page=3` renders page 3 without resetting to page 1
+  3. Search input debounces at 300ms, resets pagination to page 1 on new query, shows "Showing N results", and has a × clear button
+  4. Prev button is disabled on page 1; Next button is disabled on the last page; "Page N of M" label is always visible
+**Plans**: 5 plans
 Plans:
-**Wave 1** *(all parallel — no shared files)*
+- [ ] 05-01-PLAN.md — Terraform foundation: provider config, VPC (2 public + 2 private subnets), IGW, NAT GW, all security groups
+- [ ] 05-02-PLAN.md — ECR repository (stock-core-backend) + RDS PostgreSQL 14 (db.t3.micro, private subnets)
+- [ ] 05-03-PLAN.md — EC2 t3.micro with Elastic IP, IAM instance profile, SSH key pair, user-data Docker bootstrap
+- [ ] 05-04-PLAN.md — Lambda (esbuild zip, nodejs18.x, 900s timeout) + EventBridge daily schedule
+- [ ] 05-05-PLAN.md — CI/CD IAM user (scoped inline policy) + Terraform outputs file + state .gitignore
+**UI hint**: yes
 
-- [x] 04-01-PLAN.md — Delete 6 backend auth files, modify app.ts/config.ts/database.ts, npm uninstall 7 packages (AU-01, AU-03, AU-04, AU-05, AU-06, AU-08 backend)
-- [x] 04-02-PLAN.md — Delete 4 frontend auth files, modify hooks.ts/QueryProvider.tsx (AU-02, AU-07, AU-08 frontend)
-- [x] 04-03-PLAN.md — Strip auth references from env.production.template, README.md, CLAUDE.md (D-01, D-02, D-03)
+### Phase 9: Visual Polish
+**Goal**: The public dashboard looks professional — readable price data, correct charts, and a coherent visual design
+**Depends on**: Nothing (pure frontend; no dependency on infrastructure phases)
+**Requirements**: DESIGN-01, DESIGN-02, DESIGN-03, DESIGN-04, CHART-01, CHART-02, CHART-03, CHART-04
+**Success Criteria** (what must be TRUE):
+  1. Company list table has a sticky header that stays visible while scrolling; rows show hover highlight and alternating zebra stripe; nav bar highlights the active route
+  2. Company detail page displays price in large text; positive day change is green with ▲; negative day change is red with ▼; chart section is visually separated from price info
+  3. Historical price chart renders correct OHLCV candlesticks for at least 5 representative tickers (e.g., AAPL, TSLA, SHW) with zero ECharts console errors
+  4. Chart container shows a loading skeleton while data is fetching; shows a styled "No historical data available" empty state for tickers with zero price records
+**Plans**: 5 plans
+Plans:
+- [ ] 05-01-PLAN.md — Terraform foundation: provider config, VPC (2 public + 2 private subnets), IGW, NAT GW, all security groups
+- [ ] 05-02-PLAN.md — ECR repository (stock-core-backend) + RDS PostgreSQL 14 (db.t3.micro, private subnets)
+- [ ] 05-03-PLAN.md — EC2 t3.micro with Elastic IP, IAM instance profile, SSH key pair, user-data Docker bootstrap
+- [ ] 05-04-PLAN.md — Lambda (esbuild zip, nodejs18.x, 900s timeout) + EventBridge daily schedule
+- [ ] 05-05-PLAN.md — CI/CD IAM user (scoped inline policy) + Terraform outputs file + state .gitignore
+**UI hint**: yes
+
+---
 
 ## Progress
 
-**Execution Order:**
-Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phase 3 depends on Phase 2. Recommended order: 1 → 2 → 3, with Phase 4 at any point.
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
-| 2. Yahoo Finance Migration | 4/4 | Complete   | 2026-05-20 |
-| 3. Static Export Hardening | 3/3 | Complete   | 2026-05-20 |
-| 4. Auth Removal | 3/3 | Complete   | 2026-05-21 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Database Foundation | v1.0 | 2/2 | Done | 2026-05-20 |
+| 2. Yahoo Finance Migration | v1.0 | 4/4 | Done | 2026-05-20 |
+| 3. Static Export Hardening | v1.0 | 3/3 | Done | 2026-05-20 |
+| 4. Auth Removal | v1.0 | 3/3 | Done | 2026-05-21 |
+| 5. Backend AWS Infrastructure | v1.1 | 0/? | Not started | - |
+| 6. Docker Image Hardening | v1.1 | 0/? | Not started | - |
+| 7. CI/CD Pipelines | v1.1 | 0/? | Not started | - |
+| 8. Pagination | v1.1 | 0/? | Not started | - |
+| 9. Visual Polish | v1.1 | 0/? | Not started | - |

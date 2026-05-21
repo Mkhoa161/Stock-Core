@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A public read-only S&P 500 stock tracker that collects daily market data for all 500 companies via Yahoo Finance and serves it as a statically-exported Next.js site on S3. Users can browse the company list, view live price data, and inspect historical price charts — no login required.
+A public read-only S&P 500 stock tracker that collects daily market data for all 500+ companies via Yahoo Finance and serves it as a statically-exported Next.js site on S3. Users can browse the company list, view live price data, and inspect historical price charts — no login required. v1.0 ships with a fully wired Yahoo Finance pipeline, hermetic builds for all 503 tickers, Terraform-managed CloudFront distribution, and a clean codebase with auth fully removed.
 
 ## Core Value
 
@@ -19,35 +19,51 @@ Every S&P 500 ticker shows accurate market data and a working historical price c
 - ✓ AWS Lambda daily data collector skeleton — existing
 - ✓ Docker setup for local dev — existing
 - ✓ Static export to S3 (Next.js `output: 'export'`) — existing
+- ✓ PostgreSQL connection pool — `pg.Pool` (max 10, keepAlive) replaces single `pg.Client` — v1.0
+- ✓ Date completeness check fixed — ISO string comparison eliminates same-day API refetches — v1.0
+- ✓ Historical data retention: 365 days stored, 400-day cleanup — v1.0
+- ✓ UNNEST bulk upsert — one SQL statement per ticker, eliminates N+1 inserts — v1.0
+- ✓ Yahoo Finance (yahoo-finance2) fully wired as the sole data source — v1.0
+- ✓ All 500+ S&P 500 companies collect historical data — stale-only, within 15-min Lambda timeout — v1.0
+- ✓ Static export pre-renders pages for all 503 tickers — committed tickers.json, hermetic builds — v1.0
+- ✓ Auth removed entirely — public read-only dashboard, no login needed — v1.0
+- ✓ Terraform S3 + CloudFront infrastructure with OAC and custom 404 routing — v1.0
 
 ### Active
 
-- [ ] Yahoo Finance (yahoo-finance2) fully wired as the sole data source — migration in progress, service exists but integration is broken
-- [ ] All 500 S&P 500 companies collect historical data — currently hardcoded to 10 tickers
-- [ ] Static export pre-renders pages for all 500 tickers — currently only 5 hardcoded tickers
-- [ ] Auth removed entirely — public read-only dashboard, no login needed
-- [ ] market_cap populated correctly in stock_prices — currently always 0
-- [ ] Date completeness check fixed — Date object comparison bug causes unnecessary API refetches
-- [ ] PostgreSQL connection pool — currently uses a single pg.Client, fails under load
-- [ ] Basic security hardening — helmet headers, rate limiting on data endpoints
+- [ ] `daily_summaries` stores extended fields: `previous_close`, `day_high`, `day_low`, `fifty_two_week_high`, `fifty_two_week_low`, `trailing_pe`, `eps`
+- [ ] Historical chart period selectors: 1M / 3M / 6M / 1Y
+- [ ] Database migration system (e.g., `node-pg-migrate`) replaces `CREATE TABLE IF NOT EXISTS` schema management
+- [ ] Structured logging replaces `console.log`/`console.error` (168 occurrences)
+- [ ] `helmet` middleware + rate limiting on data endpoints
 
 ### Out of Scope
 
-- User authentication / login — removing entirely, public dashboard only
+- User authentication / login — removed entirely, public dashboard only
 - Real-time WebSocket price feeds — daily batch collection is sufficient
 - Mobile native app — web-first
 - Paid financial data APIs — Yahoo Finance (yahoo-finance2) is free and sufficient
 - Portfolio tracking or watchlists — read-only market data only
 - Admin panel or moderation — no users, no need
+- 5Y / Max chart history — 1Y is sufficient; more storage/quota not justified
+- `market_cap` in `stock_prices` table — `daily_summaries.market_cap` is the correct source; fixing stock_prices.market_cap is low priority
+- Offline mode — daily batch model is the architecture
 
 ## Context
 
-- Project was paused mid-migration from Financial Modeling Prep (FMP) to Yahoo Finance. `fmpService.ts` is deleted; `yahooFinanceService.ts` exists but is untracked and may not be fully wired into `historicalDataService.ts` and `dailyDataCollector.ts`.
-- The `yahoo-finance2` npm package (v2.13.3) wraps Yahoo Finance's unofficial API. It is already installed. The main risk is API shape changes and rate limits.
-- Lambda has a 15-minute hard timeout. Sequential 1.5s delays for 500 tickers = ~12.5 minutes for market data alone. Historical data collection for all 500 would exceed the limit — aggressive caching and selective refresh are needed.
-- Auth was never working end-to-end: `AuthProvider` was not mounted in layout, and `useAccountQuery` called `/accounts/me` which never existed. Removing auth is the right call — it simplifies a large swath of broken code.
-- Static export requires `generateStaticParams` to enumerate all ticker slugs at build time. Currently only 5 are hardcoded. Fix: fetch all tickers from the database/API at build time.
-- `CONCERNS.md` in `.planning/codebase/` has a full catalogue of technical debt — prioritize items that block the core value before addressing lower-priority issues.
+Shipped v1.0 with ~3,683 LOC TypeScript + Terraform across backend, frontend, and infrastructure.
+
+**Tech stack:** Next.js 15 (static export) + Express 5 + PostgreSQL 14 + AWS Lambda + Terraform (S3 + CloudFront)
+
+**Data pipeline:** Yahoo Finance via `yahoo-finance2` — batched quote() for market data (50 symbols/batch), chart() for historical prices, quoteSummary() for company profiles. Stale-only collection keeps Lambda under 15-minute timeout.
+
+**Known technical debt:**
+- Single `pg.Pool` shared across all services — no per-request pooling; will bottleneck under concurrent API load
+- 168 `console.*` calls — no structured logging or log levels
+- No HTTP security headers (helmet) or rate limiting on data endpoints
+- `generateStaticParams` reads from committed `tickers.json` — must re-run `generateTickers.ts` to pick up S&P 500 index changes
+
+**Deferred to v2:** DATA-01/02 (extended daily_summaries fields), DATA-03 (period selectors), INFRA-01 (migration system), INFRA-02 (structured logging), INFRA-03/04 (security hardening)
 
 ## Constraints
 
@@ -60,10 +76,20 @@ Every S&P 500 ticker shows accurate market data and a working historical price c
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Remove auth entirely | Auth was never functional; this is a public read-only dashboard | — Pending |
-| Stay on static S3 export | Simpler deployment than server-rendered; pre-rendering 500 tickers at build time is feasible | — Pending |
-| Yahoo Finance (yahoo-finance2) as sole data provider | Free, already partially implemented, covers all needed endpoints | — Pending |
-| Aggressive caching in Lambda | Only refresh companies with stale data to stay within 15-min timeout | — Pending |
+| Remove auth entirely | Auth was never functional; this is a public read-only dashboard | ✓ Good — clean codebase, zero auth dead weight |
+| Stay on static S3 export | Simpler deployment than server-rendered; pre-rendering 500 tickers at build time is feasible | ✓ Good — 503 tickers pre-rendered; hermetic builds work |
+| Yahoo Finance (yahoo-finance2) as sole data provider | Free, already partially implemented, covers all needed endpoints | ✓ Good — full pipeline wired, deprecations resolved |
+| Aggressive caching in Lambda | Only refresh companies with stale data to stay within 15-min timeout | ✓ Good — stale-only collection implemented and working |
+| pg.Pool with max:10, keepAlive:true | Prevents RDS idle connection resets; enables concurrent writes | ✓ Good — connection exhaustion eliminated |
+| Probe-and-release pattern in initializeDatabase() | Verifies connectivity at startup without holding a persistent handle | ✓ Good — clean startup pattern |
+| UNNEST bulk upsert with ON CONFLICT DO UPDATE SET | One SQL statement per ticker; corrected prices overwrite stale rows on re-run | ✓ Good — N+1 eliminated, re-runs idempotent |
+| withRetry (fn, retries?) signature — no label arg | Simplified; label was unused | ✓ Good — simpler call sites |
+| changePercent in PERCENT units — no x100 multiplier | Empirically verified in Wave 0; getBulkQuotes passthrough is correct | ✓ Good — data accuracy confirmed |
+| HTTPError via yahooFinance.errors.HTTPError | Subpath import fails under nodenext moduleResolution | ✓ Good — works under strict module resolution |
+| OAC (not deprecated OAI) for S3 origin | AWS current best practice; OAI is deprecated | ✓ Good — future-proof CloudFront setup |
+| Terraform .terraform.lock.hcl committed | Reproducible provider selection across environments | ✓ Good — deterministic builds |
+| Committed tickers.json for generateStaticParams | Hermetic builds — no live API dependency at build time | ✓ Good — build works offline/in CI |
+| dynamicParams = false on [ticker] route | Unknown tickers serve 404 instead of attempting server-side generation | ✓ Good — correct static export behavior |
 
 ## Evolution
 
@@ -83,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-19 after initialization*
+*Last updated: 2026-05-21 after v1.0 milestone*

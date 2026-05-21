@@ -9,10 +9,10 @@
 
 ### Database
 
-- [ ] **DB-01**: Database uses `pg.Pool` (max 10 connections) instead of a single `pg.Client` — prerequisite for concurrent inserts
-- [ ] **DB-02**: Historical data upsert uses UNNEST bulk insert (one statement per ticker, not one INSERT per row)
-- [ ] **DB-03**: Date completeness check uses ISO date string comparison (`toISOString().slice(0,10)`) to strip time-of-day component — fixes time-of-day mismatch between `new Date()` wall-clock and pg UTC midnight DATE columns
-- [ ] **DB-04**: `MAX_DAYS` is 365 and cleanup retention is 400 days (was 60/60)
+- [x] **DB-01**: Database uses `pg.Pool` (max 10 connections) instead of a single `pg.Client` — prerequisite for concurrent inserts
+- [x] **DB-02**: Historical data upsert uses UNNEST bulk insert (one statement per ticker, not one INSERT per row)
+- [x] **DB-03**: Date completeness check uses ISO date string comparison (`toISOString().slice(0,10)`) to strip time-of-day component — fixes time-of-day mismatch between `new Date()` wall-clock and pg UTC midnight DATE columns
+- [x] **DB-04**: `MAX_DAYS` is 365 and cleanup retention is 400 days (was 60/60)
 
 ### Yahoo Finance Migration
 
@@ -83,10 +83,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | Phase 1: Database Foundation | Pending |
-| DB-02 | Phase 1: Database Foundation | Pending |
-| DB-03 | Phase 1: Database Foundation | Pending |
-| DB-04 | Phase 1: Database Foundation | Pending |
+| DB-01 | Phase 1: Database Foundation | Complete |
+| DB-02 | Phase 1: Database Foundation | Complete |
+| DB-03 | Phase 1: Database Foundation | Complete |
+| DB-04 | Phase 1: Database Foundation | Complete |
 | YF-01 | Phase 2: Yahoo Finance Migration | Complete |
 | YF-02 | Phase 2: Yahoo Finance Migration | Complete |
 | YF-03 | Phase 2: Yahoo Finance Migration | Complete |

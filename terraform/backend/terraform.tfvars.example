@@ -1,0 +1,24 @@
+# terraform.tfvars.example
+# Copy this file to terraform.tfvars and fill in all values before running terraform apply.
+# NEVER commit terraform.tfvars to git — it contains sensitive credentials.
+
+# Optional: override defaults
+# project_name = "stock-core"
+# environment  = "production"
+
+# Required: PostgreSQL credentials
+db_username = "stock_core_admin"
+db_password = "REQUIRED — choose a secure password (min 8 chars), never commit this"
+
+# Required: EC2 SSH key
+# Run: cat ~/.ssh/id_rsa.pub  (or id_ed25519.pub)
+ec2_public_key = "ssh-rsa AAAA... your-key-comment"
+
+# Required: from terraform/frontend outputs
+# Run: cd terraform/frontend && terraform output
+frontend_bucket_name        = "your-s3-bucket-name"
+frontend_cloudfront_arn     = "arn:aws:cloudfront::123456789012:distribution/ABCDEFGHIJ"
+frontend_cloudfront_domain  = "d1234567890abc.cloudfront.net"
+
+# Optional: Lambda zip path (relative to terraform/backend/)
+# lambda_zip_path = "../../backend/dist/lambda.zip"
