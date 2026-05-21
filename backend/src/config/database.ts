@@ -107,4 +107,5 @@ const createTables = async () => {
 // Initialize database
 initializeDatabase();
 
+export { initializeDatabase };
 export default pool;

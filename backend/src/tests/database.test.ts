@@ -1,10 +1,12 @@
 import { companyService } from '../services/companyService';
+import { initializeDatabase } from '../config/database';
 
 describe('Database Operations Tests', () => {
   const testTicker = `T${Date.now().toString().slice(-8)}`; // 9 characters max
 
   beforeAll(async () => {
     console.log('🧪 Setting up database test environment...');
+    await initializeDatabase();
   });
 
   afterAll(async () => {
