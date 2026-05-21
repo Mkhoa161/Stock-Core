@@ -27,11 +27,10 @@ A public read-only S&P 500 stock tracker that collects daily market data for all
 - Lockfile: `backend/package-lock.json` and `frontend/package-lock.json` both present
 ## Frameworks
 - Express 5.1.0 - HTTP server and routing (`backend/src/app.ts`, `backend/src/server.ts`)
-- Passport 0.7.0 - Authentication middleware (`backend/src/config/passport.ts`)
 - Next.js 15.4.1 - React framework, configured for static export (`frontend/next.config.ts`)
 - React 19.1.0 - UI library (`frontend/src/`)
 - TailwindCSS 4.x - Utility-first CSS via PostCSS (`frontend/postcss.config.mjs`)
-- TanStack React Query 5.x - Server state management and caching (`frontend/src/lib/hooks.ts`, `frontend/src/lib/queries.ts`)
+- TanStack React Query 5.x - Server state management and caching (`frontend/src/lib/hooks.ts`)
 - Chart.js 4.5.0 + react-chartjs-2 5.x - Chart rendering (`frontend/src/components/`)
 - echarts 5.6.0 - Additional chart library (`frontend/src/components/`)
 - chartjs-adapter-date-fns 3.x - Date adapter for Chart.js time scales
@@ -45,22 +44,16 @@ A public read-only S&P 500 stock tracker that collects daily market data for all
 ## Key Dependencies
 - `pg` 8.x - PostgreSQL client (no ORM; raw SQL queries) (`backend/src/config/database.ts`)
 - `yahoo-finance2` 2.13.3 - Market data source (`backend/src/services/yahooFinanceService.ts`)
-- `jsonwebtoken` 9.0.2 - JWT generation and verification (`backend/src/services/authService.ts`)
-- `bcryptjs` 2.4.3 - Password hashing (`backend/src/services/userService.ts`)
-- `passport-google-oauth20` 2.0.0 - Google OAuth 2.0 strategy (`backend/src/config/passport.ts`)
-- `passport-jwt` 4.0.1 - JWT extraction and validation strategy
-- `passport-local` 1.0.0 - Email/password authentication strategy
 - `cheerio` 1.1.0 - HTML parsing for Wikipedia S&P 500 scraping (`backend/src/scripts/scrapeSP500.ts`)
 - `axios` 1.11.0 - HTTP client for web scraping requests
 - `dotenv` 17.x - Environment variable loading
 - `cors` 2.8.5 - Cross-origin resource sharing with frontend origin allowlist
-- `cookie-parser` 1.4.7 - HTTP-only cookie parsing for JWT auth
 - Native `fetch` API - All API calls via `frontend/src/lib/api.ts`
 - `@tanstack/react-query` 5.x - Query caching and state synchronization
 - `@types/aws-lambda` 8.10.152 - Type definitions for Lambda handler in `backend/src/lambda/dailyDataCollector.ts`
 ## Configuration
 - Loaded via `dotenv` in `backend/src/config/config.ts`
-- Required production variables: `JWT_SECRET`, `FRONTEND_URL`, `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+- Required production variables: `FRONTEND_URL`, `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`
 - Template available: `backend/env.production.template`
 - Development defaults fall back to `localhost` values; production throws on missing critical vars
 - `NEXT_PUBLIC_API_BASE_URL` - Required in production; falls back to `http://localhost:3000` in development

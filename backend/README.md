@@ -25,9 +25,6 @@ We use a **lazy loading strategy** for historical data to efficiently manage API
 - **`fmpService.ts`**: Financial Modeling Prep API integration
 - **`companyService.ts`**: Database operations for companies
 - **`historicalDataService.ts`**: Lazy loading historical data service
-- **`authService.ts`**: Authentication logic
-- **`userService.ts`**: User management
-
 ### Scripts:
 - **`scrapeSP500.ts`**: Scrapes S&P 500 companies from Wikipedia
 - **`testLambda.ts`**: Tests Lambda automation
@@ -38,13 +35,10 @@ We use a **lazy loading strategy** for historical data to efficiently manage API
 ### Prerequisites:
 - Node.js 18+
 - PostgreSQL database
-- FMP API key
 
 ### Environment Variables:
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/stock_insight
-FMP_API_KEY=your_fmp_api_key_here
-JWT_SECRET=your_jwt_secret_here
 ```
 
 ### Installation:
@@ -216,96 +210,6 @@ Get historical price data for a company with lazy loading and caching.
 }
 ```
 
----
-
-### Authentication (Requires JWT Token)
-
-#### `POST /api/auth/register`
-Register a new user account.
-
-**Request Body (form-data):**
-```
-email: user@example.com
-password: securepassword123
-name: John Doe
-```
-
-**Response:**
-```json
-{
-  "message": "User registered successfully",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "name": "John Doe",
-    "created_at": "2024-01-15T10:30:00Z"
-  }
-}
-```
-
-**Status Codes:**
-- `201` - User created successfully
-- `400` - Invalid input (missing fields, weak password, invalid email)
-- `409` - Email already exists
-- `500` - Server error
-
----
-
-#### `POST /api/auth/login`
-Authenticate user and receive JWT token.
-
-**Request Body (form-data):**
-```
-email: user@example.com
-password: securepassword123
-```
-
-**Response:**
-```json
-{
-  "message": "Login successful",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "name": "John Doe"
-  }
-}
-```
-
-**Status Codes:**
-- `200` - Login successful
-- `400` - Missing email or password
-- `401` - Invalid credentials
-- `500` - Server error
-
----
-
-#### `GET /api/auth/profile`
-Get current user's profile information.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response:**
-```json
-{
-    "id": 1,
-    "email": "user@example.com",
-  "name": "John Doe",
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T10:30:00Z"
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `401` - Invalid or missing token
-- `404` - User not found
-- `500` - Server error
-
 ## 🧪 Testing
 
 ### API Testing (Bruno):
@@ -373,7 +277,6 @@ src/
 
 ## 🔒 Security
 
-- **JWT Authentication**: For user management (register/login/profile)
 - **Lambda Automation**: All data collection handled by AWS Lambda
 - **Lazy Loading**: Historical data fetched on-demand, no manual intervention needed
 - **Environment Variables**: Secure configuration management
