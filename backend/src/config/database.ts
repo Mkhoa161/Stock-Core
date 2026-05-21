@@ -25,22 +25,6 @@ const createTables = async () => {
   try {
     console.log('🏗️ Creating PostgreSQL tables...');
     
-    // Create users table
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255),
-        username VARCHAR(255),
-        first_name VARCHAR(255),
-        last_name VARCHAR(255),
-        avatar TEXT,
-        google_id VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
     // Create companies table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS companies (
@@ -108,12 +92,6 @@ const createTables = async () => {
     `);
 
     // Create triggers to automatically update updated_at
-    await pool.query(`
-      DROP TRIGGER IF EXISTS update_users_updated_at ON users;
-      CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-          FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-    `);
-
     await pool.query(`
       DROP TRIGGER IF EXISTS update_companies_updated_at ON companies;
       CREATE TRIGGER update_companies_updated_at BEFORE UPDATE ON companies
