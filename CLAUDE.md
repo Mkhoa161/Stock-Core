@@ -77,7 +77,7 @@ A public read-only S&P 500 stock tracker that collects daily market data for all
 ## Naming Patterns
 - Backend TypeScript source files use camelCase: `companyService.ts`, `authMiddleware.ts`, `errorHandler.ts`
 - Frontend React components use PascalCase: `CompaniesTable.tsx`, `CompanyDetail.tsx`, `Navigation.tsx`
-- Frontend lib/util files use camelCase: `api.ts`, `hooks.ts`, `utils.ts`, `queries.ts`
+- Frontend lib/util files use camelCase: `api.ts`, `hooks.ts`, `utils.ts`
 - Route files use camelCase: `companyRoutes.ts`, `authRoutes.ts`
 - Model files use camelCase, named after domain entity: `company.ts`, `user.ts`
 - PascalCase for class declarations: `CompanyService`, `AuthService`, `YahooFinanceService`, `HistoricalDataService`
@@ -229,7 +229,7 @@ A public read-only S&P 500 stock tracker that collects daily market data for all
 - Used by: Pages
 - Purpose: API communication and React Query integration
 - Location: `frontend/src/lib/`
-- Contains: `api.ts` (fetch wrapper), `hooks.ts` (React Query hooks), `queries.ts`, `utils.ts`
+- Contains: `api.ts` (fetch wrapper), `hooks.ts` (React Query hooks), `utils.ts`
 - Depends on: `NEXT_PUBLIC_API_BASE_URL` env var
 - Used by: Components
 ## Data Flow
