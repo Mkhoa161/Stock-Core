@@ -1,6 +1,6 @@
 resource "aws_security_group" "lambda" {
   name        = "${var.project_name}-lambda-sg"
-  description = "Lambda dailyDataCollector — egress to VPC (RDS) and internet (Yahoo Finance via NAT)"
+  description = "Lambda dailyDataCollector - egress to VPC (RDS) and internet (Yahoo Finance via NAT)"
   vpc_id      = aws_vpc.main.id
 
   egress {
@@ -19,7 +19,7 @@ resource "aws_security_group" "lambda" {
 
 resource "aws_security_group" "ec2" {
   name        = "${var.project_name}-ec2-sg"
-  description = "EC2 backend instance — port 3000 (app) and 22 (SSH)"
+  description = "EC2 backend instance - port 3000 (app) and 22 (SSH)"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -52,7 +52,7 @@ resource "aws_security_group" "ec2" {
 
 resource "aws_security_group" "rds" {
   name        = "${var.project_name}-rds-sg"
-  description = "RDS PostgreSQL — port 5432 from EC2 and Lambda SGs only, no public access"
+  description = "RDS PostgreSQL - port 5432 from EC2 and Lambda SGs only, no public access"
   vpc_id      = aws_vpc.main.id
 
   ingress {

@@ -1,6 +1,6 @@
 import { DailyDataCollector } from '../lambda/dailyDataCollector';
 import { companyService } from '../services/companyService';
-import { fmpService } from '../services/fmpService';
+import { yahooFinanceService } from '../services/yahooFinanceService';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -81,8 +81,6 @@ async function testFullExecution() {
   console.log(`🔍 Companies Scraped: ${result.companiesScraped}`);
   console.log(`🏢 Profiles Updated: ${result.companiesUpdated}`);
   console.log(`📈 Historical Data Collected: ${result.historicalDataCollected}`);
-  console.log(`📊 API Calls Used: ${result.apiCallsUsed}`);
-  console.log(`📊 API Calls Remaining: ${result.apiCallsRemaining}`);
   console.log(`❌ Errors: ${result.errors.length}`);
   
   if (result.errors.length > 0) {
@@ -134,8 +132,7 @@ async function testApiCallTracking() {
     console.log(`📦 Testing with ${companiesNeedingUpdate.length} companies...`);
     const tickers = companiesNeedingUpdate.map((c: any) => c.ticker);
     
-    // This should use 1 API call
-    const profiles = await fmpService.getBulkCompanyProfiles(tickers);
+    const profiles = await yahooFinanceService.getBulkCompanyProfiles(tickers);
     console.log(`✅ Got ${profiles.length} profiles`);
   }
   
@@ -146,19 +143,17 @@ async function testApiCallTracking() {
 async function testErrorHandling() {
   console.log('⚠️ Testing error handling...\n');
   
-  // Test with invalid ticker
   console.log('🔧 Testing with invalid ticker...');
   try {
-    const invalidProfiles = await fmpService.getBulkCompanyProfiles(['INVALID_TICKER']);
+    const invalidProfiles = await yahooFinanceService.getBulkCompanyProfiles(['INVALID_TICKER']);
     console.log(`✅ Handled invalid ticker gracefully: ${invalidProfiles.length} results`);
   } catch (error: any) {
     console.log(`✅ Error handling works: ${error.message}`);
   }
   
-  // Test with empty array
   console.log('🔧 Testing with empty array...');
   try {
-    const emptyProfiles = await fmpService.getBulkCompanyProfiles([]);
+    const emptyProfiles = await yahooFinanceService.getBulkCompanyProfiles([]);
     console.log(`✅ Handled empty array gracefully: ${emptyProfiles.length} results`);
   } catch (error: any) {
     console.log(`✅ Error handling works: ${error.message}`);

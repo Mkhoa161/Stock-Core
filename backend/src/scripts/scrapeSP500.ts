@@ -16,7 +16,9 @@ async function scrapeSP500Companies(): Promise<SP500Company[]> {
     
     // Wikipedia S&P 500 page
     const url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies';
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: { 'User-Agent': 'StockInsight/1.0 (personal project; khoango)' },
+    });
     const $ = cheerio.load(response.data);
     
     const companies: SP500Company[] = [];
@@ -33,17 +35,8 @@ async function scrapeSP500Companies(): Promise<SP500Company[]> {
         
         // Only add if we have a valid ticker and name
         if (ticker && name && ticker.length <= 10) {
-          // Convert dots to hyphens for FMP compatibility (e.g., BF.B -> BF-B)
-          const originalTicker = ticker.toUpperCase();
-          const fmpTicker = originalTicker.replace(/\./g, '-');
-          
-          // Log ticker conversions for transparency
-          if (originalTicker !== fmpTicker) {
-            console.log(`🔄 Converting ticker: ${originalTicker} → ${fmpTicker}`);
-          }
-          
           companies.push({
-            ticker: fmpTicker,
+            ticker: ticker.toUpperCase(),
             name
           });
         }
