@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -24,18 +24,13 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - JWT_SECRET=dev-jwt-secret-key-for-local-development-only
       - BASE_URL=http://localhost:3000
-      - FMP_API_KEY=VCLs6KPtU4qFu27Hps1OsweEs7FfBWoP
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USERNAME=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=stock_insight
       - FRONTEND_URL=http://localhost:3001
-      - GOOGLE_CLIENT_ID=dev-google-client-id
-      - GOOGLE_CLIENT_SECRET=dev-google-client-secret
-      - GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
     depends_on:
       - postgres
     restart: unless-stopped

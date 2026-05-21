@@ -16,7 +16,6 @@ out/
 .env.staging
 
 # Docker compose files with sensitive data
-docker-compose.prod.yml
 docker-compose.staging.yml
 
 # Database files (development)

@@ -1,7 +1,9 @@
+# IMAGE_URI must be exported before running compose. See env.production.template for the ECR URI format.
+# Usage: IMAGE_URI=<ecr-uri>:<tag> docker compose -f docker-compose.prod.yml up -d
+
 services:
-  # Backend API (Production - EC2)
   backend:
-    build: .
+    image: ${IMAGE_URI}
     container_name: stock-insight-backend
     ports:
       - "3000:3000"
@@ -10,7 +12,6 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - FMP_API_KEY=${FMP_API_KEY}
     restart: unless-stopped
     networks:
       - stock-insight-network
