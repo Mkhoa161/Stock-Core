@@ -1,249 +1,253 @@
-# Stock Insight App
+# Stock Core
 
-A full-stack stock market dashboard application built with Next.js frontend and Node.js/TypeScript backend, featuring real-time market data, historical charts, and intelligent data caching.
+A public, read-only S&P 500 market tracker. Displays live prices and historical candlestick charts for all 500 companies. No login required.
 
-## Overview
+Live: **https://d3jobdo4aj97zu.cloudfront.net**
 
-Stock Insight provides a comprehensive view of the stock market with:
-- **Real-time market data** for S&P 500 companies
-- **Interactive candlestick charts** with historical price data
-- **Intelligent lazy loading** to optimize API usage and performance
-- **User authentication** with JWT tokens
-- **Docker support** for easy deployment
-- **AWS deployment ready** with EC2, S3, CloudFront, and RDS
+---
+
+## What it does
+
+- Browse all 503 S&P 500 companies with live price, day change, market cap, and volume
+- Click any company to see a 30-day candlestick chart with OHLCV history
+- Search and paginate the company list
+- Data is collected nightly at 2 AM UTC by an AWS Lambda function
+
+---
 
 ## Architecture
 
-### Frontend (Next.js)
-- **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS
-- **State Management**: React Query for server state
-- **Charts**: ECharts for candlestick visualization
-- **Authentication**: JWT-based auth with context providers
-- **Deployment**: Static export to S3 + CloudFront
+```
+Browser
+  └── CloudFront (HTTPS)
+        ├── /api/*  ──────► EC2 (Express API, port 3000, Docker)
+        │                       └── RDS PostgreSQL
+        └── /*  ─────────► S3 (Next.js static export)
 
-### Backend (Node.js/TypeScript)
-- **Framework**: Express.js with TypeScript
-- **Database**: PostgreSQL with pg library
-- **Authentication**: JWT with Passport.js (Local + Google OAuth)
-- **Data Sources**: Yahoo Finance 2 (migrating from FMP)
-- **Caching**: Intelligent lazy loading strategy
-- **Deployment**: Docker containers on EC2
+AWS Lambda (nightly cron)
+  └── Yahoo Finance API ──► RDS PostgreSQL
+```
 
-## Quick Start
+**Frontend** — Next.js 15 static export deployed to S3 + CloudFront. No server-side rendering; every page is a pre-built HTML file. Client components fetch data from the API via React Query.
+
+**Backend** — Express 5 REST API running in a Docker container on EC2. Raw SQL via `pg` (no ORM). Serves company data and historical prices from PostgreSQL. Also exposes on-demand historical fetching with a DB-first cache.
+
+**Data pipeline** — AWS Lambda (Node.js 20) runs nightly on EventBridge. Scrapes the S&P 500 list from Wikipedia, collects bulk quotes and historical OHLCV data from Yahoo Finance, writes everything to RDS.
+
+**Infrastructure** — Terraform-managed. Two modules: `terraform/backend` (EC2, RDS, Lambda, ECR, VPC, security groups) and `terraform/frontend` (S3, CloudFront with dual origins).
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend framework | Next.js 15.4 + React 19 |
+| Styling | Tailwind CSS 4 |
+| Data fetching | TanStack React Query 5 |
+| Charts | ECharts 5 (candlestick) |
+| Backend framework | Express 5 + TypeScript |
+| Database | PostgreSQL 14 (AWS RDS) |
+| Database client | `pg` 8 — raw SQL, no ORM |
+| Market data | `yahoo-finance2` 2.13 |
+| Lambda runtime | Node.js 20 |
+| Container | Docker (`node:20-alpine`) |
+| IaC | Terraform |
+| CI/CD | GitHub Actions |
+| CDN | AWS CloudFront |
+| Object storage | AWS S3 |
+
+---
+
+## API
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/companies` | Paginated company list with latest prices. Params: `page`, `limit` (max 100), `search` |
+| `GET` | `/api/companies/:ticker` | Single company with latest price data |
+| `GET` | `/api/companies/:ticker/historical` | Historical OHLCV. Params: `days` (default 30, max 365) or `from`+`to` (YYYY-MM-DD) |
+
+All API traffic routes through CloudFront (`/api/*` behavior → EC2 origin, CachingDisabled).
+
+---
+
+## Local Development
 
 ### Prerequisites
-- Node.js 18+
-- PostgreSQL database
-- Docker (optional, for containerized deployment)
 
-### Development Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Stock-Insight
-   ```
-
-2. **Backend Setup**
-   ```bash
-   cd backend
-   npm install
-   
-   # Copy environment template
-   cp env.production.template .env
-   
-   # Edit .env with your database and API keys
-   # DATABASE_URL=postgresql://user:password@localhost:5432/stock_insight
-   # FMP_API_KEY=your_fmp_api_key_here
-   # JWT_SECRET=your_jwt_secret_here
-   
-   # Build and start
-   npm run build
-   npm run dev
-   ```
-
-3. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   
-   # Create .env.local
-   echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:3000" > .env.local
-   
-   # Start development server
-   npm run dev
-   ```
-
-4. **Database Setup**
-   ```bash
-   cd backend
-   npm run scrape:sp500  # Load S&P 500 companies
-   ```
-
-5. **Access the application**
-   - Frontend: http://localhost:3001
-   - Backend API: http://localhost:3000
-
-## 🐳 Docker Deployment
-
-### Development
-```bash
-cd backend
-docker-compose up -d
-```
-
-### Production
-```bash
-cd backend
-# Copy and configure production files
-cp docker-compose.prod.yml.template docker-compose.prod.yml
-cp env.production.template .env.production
-
-# Edit production environment variables
-# Then deploy
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-## AWS Deployment
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for comprehensive AWS deployment instructions including:
-- EC2 instance setup for backend
-- S3 + CloudFront for frontend
-- RDS PostgreSQL database
-- Security groups and networking
-
-## API Documentation
-
-#### Companies
-- `GET /api/companies` - Get all companies with market data
-- `GET /api/companies/:ticker` - Get specific company details
-- `GET /api/companies/:ticker/historical` - Get historical price data
-
-#### Historical Data Parameters
-- `days` (optional): Number of days (default: 60, max: 60)
-- `from` & `to` (optional): Custom date range (YYYY-MM-DD format)
-
-## Key Features
-
-### Intelligent Data Loading
-- **Lazy Loading**: Historical data fetched on-demand
-- **Smart Caching**: Automatic caching of API responses
-- **API Efficiency**: Minimizes external API calls
-- **Performance**: Cached data loads in ~50ms
-
-### Data Sources
-- **FMP API**: Legacy support (being migrated away from)
-- **S&P 500**: Comprehensive company database
-
-
-## Testing
-
-### API Testing
-```bash
-# Backend tests
-cd backend
-npm test
-
-# API endpoint testing with Bruno
-# See bruno-stock-insight-api/ directory
-```
-
-### Yahoo Finance Service Testing
-```bash
-cd backend
-npx ts-node src/scripts/testYahooFinance.ts
-```
-
-## 🔧 Development
-
-### Available Scripts
-
-#### Backend
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run scrape:sp500 # Load S&P 500 companies
-npm test            # Run tests
-```
-
-#### Frontend
-```bash
-npm run dev         # Start development server
-npm run build       # Build for production
-npm run start       # Start production server
-```
-
-### Project Structure
-```
-Stock-Insight/
-├── frontend/                 # Next.js application
-│   ├── src/
-│   │   ├── app/             # App Router pages
-│   │   ├── components/      # React components
-│   │   ├── lib/            # Utilities and API client
-│   │   └── providers/      # Context providers
-│   └── public/             # Static assets
-├── backend/                 # Node.js/Express API
-│   ├── src/
-│   │   ├── services/       # Business logic
-│   │   ├── routes/         # API endpoints
-│   │   ├── scripts/        # Utility scripts
-│   │   ├── models/         # TypeScript interfaces
-│   │   └── config/         # Configuration
-│   └── dist/               # Compiled JavaScript
-├── bruno-stock-insight-api/ # API testing files
-└── DEPLOYMENT.md           # AWS deployment guide
-```
-
-## 🛠️ Technology Stack
-
-### Frontend
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- React Query
-- ECharts
-- React Hook Form
+- Node.js 20+
+- Docker + Docker Compose (for PostgreSQL)
 
 ### Backend
-- Node.js
-- Express.js
-- TypeScript
-- PostgreSQL
-- Passport.js (JWT + Google OAuth)
-- FMP API
-- Docker
 
-### Infrastructure
-- AWS EC2 (Backend)
-- AWS S3 + CloudFront (Frontend)
-- AWS RDS PostgreSQL
-- Docker & Docker Compose
+```bash
+cd backend
+npm install
 
-## 📝 Environment Variables
+# Start local PostgreSQL on port 5433
+docker-compose up -d
 
-### Backend (.env)
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/stock_insight
+# Copy env template and fill in values
+cp env.production.template .env
+# Set DB_HOST=localhost, DB_PORT=5433, DB_USERNAME=postgres, DB_PASSWORD=postgres, DB_NAME=stock_insight
 
-# API Keys
-FMP_API_KEY=your_fmp_api_key_here
-
-# Authentication
-JWT_SECRET=your_jwt_secret_here
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# Application
-NODE_ENV=development
-PORT=3000
-BASE_URL=http://localhost:3000
-FRONTEND_URL=http://localhost:3001
+npm run dev        # ts-node dev server on port 3000
 ```
 
-### Frontend (.env.local)
+### Frontend
+
+```bash
+cd frontend
+npm install
+
+# Point at local backend
+echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:3000" > .env.local
+
+npm run dev        # Next.js dev server on port 3001
+```
+
+### Seed the database
+
+```bash
+cd backend
+npm run scrape:sp500   # scrapes Wikipedia, inserts S&P 500 companies
+npm run test:lambda    # runs the full data collection pipeline locally
+```
+
+---
+
+## CI/CD
+
+Two GitHub Actions workflows trigger on any `v*.*` tag pushed to `main`:
+
+| Workflow | File | Steps |
+|---|---|---|
+| Deploy Backend | `deploy-backend.yml` | Jest tests (with Postgres service) → build + push Docker image to ECR → SSH to EC2, pull image, restart container |
+| Deploy Frontend | `deploy-frontend.yml` | `next build` (static export) → `aws s3 sync` to S3 → CloudFront invalidation |
+
+**To release:**
+```bash
+git tag v1.4
+git push origin v1.4
+```
+
+**Required GitHub Secrets** (see `docs/deployment.md` for retrieval instructions):
+
+| Secret | Value |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | CI/CD IAM user key ID |
+| `AWS_SECRET_ACCESS_KEY` | CI/CD IAM user secret key |
+| `EC2_HOST` | EC2 Elastic IP |
+| `EC2_SSH_PRIVATE_KEY` | EC2 SSH private key (.pem contents) |
+| `ECR_REGISTRY` | Full ECR repository URL |
+| `S3_BUCKET_NAME` | Frontend S3 bucket name |
+| `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID |
+| `NEXT_PUBLIC_API_BASE_URL` | CloudFront HTTPS URL (e.g. `https://xxxx.cloudfront.net`) |
+
+---
+
+## Infrastructure (Terraform)
+
+```
+terraform/
+├── backend/    # EC2, RDS, Lambda, ECR, VPC, subnets, security groups, EventBridge
+└── frontend/   # S3 bucket, CloudFront distribution (dual origin: S3 + EC2)
+```
+
+```bash
+cd terraform/backend   # or frontend
+terraform init
+terraform plan
+terraform apply
+```
+
+---
+
+## Lambda Data Pipeline
+
+The `stock-core-daily-collector` Lambda runs at `cron(0 2 * * ? *)` (2 AM UTC).
+
+**Pipeline steps:**
+1. Scrape S&P 500 tickers from Wikipedia — insert new companies, skip existing
+2. Fetch live market data for all 503 tickers via batched `quote()` calls — writes to `daily_summaries`
+3. Fetch 365 days of OHLCV history for stale tickers (missing or >7 days old) — writes to `stock_prices`
+4. Update company profiles (sector, industry) for up to 50 stale companies per run
+5. Delete `stock_prices` rows older than 400 days
+
+**To build and deploy the Lambda bundle manually:**
+```bash
+cd backend
+npm run build:lambda            # esbuild → dist/lambda.zip
+aws lambda update-function-code \
+  --function-name stock-core-daily-collector \
+  --zip-file fileb://dist/lambda.zip \
+  --region us-east-1
+```
+
+**To invoke manually:**
+```bash
+aws lambda invoke \
+  --function-name stock-core-daily-collector \
+  --invocation-type Event \
+  --region us-east-1 \
+  --payload '{"source":"manual"}' \
+  --cli-binary-format raw-in-base64-out \
+  /tmp/out.json
+```
+
+---
+
+## Project Structure
+
+```
+Stock-Core/
+├── frontend/
+│   └── src/
+│       ├── app/               # Next.js App Router pages
+│       ├── components/        # CompaniesTable, CompanyDetail, Navigation
+│       ├── lib/               # api.ts (fetch wrapper), hooks.ts (React Query), utils.ts
+│       ├── providers/         # QueryProvider (React Query client)
+│       └── types/             # TypeScript interfaces
+├── backend/
+│   └── src/
+│       ├── lambda/            # dailyDataCollector.ts — Lambda handler + pipeline
+│       ├── routes/            # companyRoutes.ts
+│       ├── services/          # companyService, historicalDataService, yahooFinanceService
+│       ├── scripts/           # scrapeSP500.ts, testLambda.ts
+│       ├── config/            # database.ts (pg client), config.ts
+│       └── models/            # TypeScript interfaces (company.ts, user.ts)
+├── terraform/
+│   ├── backend/               # EC2, RDS, Lambda, ECR, VPC, IAM
+│   └── frontend/              # S3, CloudFront
+├── .github/
+│   └── workflows/
+│       ├── deploy-backend.yml
+│       └── deploy-frontend.yml
+└── docs/
+    └── deployment.md          # Secrets guide, EC2 setup, recovery runbook
+```
+
+---
+
+## Environment Variables
+
+### Backend (`.env` / `.env.production`)
+
+```env
+NODE_ENV=production
+PORT=3000
+DB_HOST=<RDS endpoint>
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=<password>
+DB_NAME=stock_insight
+FRONTEND_URL=https://<cloudfront-domain>
+```
+
+### Frontend (`.env.local`)
+
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
 ```
+
+In production this is baked in at build time via the `NEXT_PUBLIC_API_BASE_URL` GitHub secret.
