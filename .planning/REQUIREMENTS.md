@@ -37,13 +37,13 @@
 ### Auth Removal
 
 - [ ] **AU-01**: All auth-related backend files deleted: `authRoutes.ts`, `authMiddleware.ts`, `passport.ts`, `authService.ts`, `userService.ts`, `authUtils.ts`, `user.ts`
-- [ ] **AU-02**: All auth-related frontend files deleted: `AuthGuard.tsx`, `AuthProvider.tsx`, `contexts.ts`, `queries.ts`
+- [x] **AU-02**: All auth-related frontend files deleted: `AuthGuard.tsx`, `AuthProvider.tsx`, `contexts.ts`, `queries.ts`
 - [ ] **AU-03**: Auth packages removed from `backend/package.json`: `passport`, `passport-local`, `passport-jwt`, `passport-google-oauth20`, `bcryptjs`, `jsonwebtoken`, `cookie-parser` (and their `@types/*`)
 - [ ] **AU-04**: `backend/src/app.ts` has no passport, cookie-parser, or auth route imports
 - [ ] **AU-05**: `backend/src/config/config.ts` has no JWT or OAuth configuration
 - [ ] **AU-06**: `database.ts` does not create the `users` table
-- [ ] **AU-07**: Frontend has zero references to `useAuth`, `AuthContext`, `AuthGuard`, or `AuthProvider` (verified with grep)
-- [ ] **AU-08**: Both `npx tsc --noEmit` (backend and frontend) pass after auth removal
+- [x] **AU-07**: Frontend has zero references to `useAuth`, `AuthContext`, `AuthGuard`, or `AuthProvider` (verified with grep)
+- [x] **AU-08**: Both `npx tsc --noEmit` (backend and frontend) pass after auth removal
 
 ---
 
@@ -102,13 +102,13 @@
 | SE-04 | Phase 3: Static Export Hardening | Complete |
 | SE-05 | Phase 3: Static Export Hardening | Complete |
 | AU-01 | Phase 4: Auth Removal | Pending |
-| AU-02 | Phase 4: Auth Removal | Pending |
+| AU-02 | Phase 4: Auth Removal | Complete |
 | AU-03 | Phase 4: Auth Removal | Pending |
 | AU-04 | Phase 4: Auth Removal | Pending |
 | AU-05 | Phase 4: Auth Removal | Pending |
 | AU-06 | Phase 4: Auth Removal | Pending |
-| AU-07 | Phase 4: Auth Removal | Pending |
-| AU-08 | Phase 4: Auth Removal | Pending |
+| AU-07 | Phase 4: Auth Removal | Complete |
+| AU-08 | Phase 4: Auth Removal | Complete |
 
 **Coverage:**
 - v1 requirements: 26 total

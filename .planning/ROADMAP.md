@@ -106,7 +106,7 @@ Plans:
 **Wave 1** *(all parallel — no shared files)*
 
 - [ ] 04-01-PLAN.md — Delete 6 backend auth files, modify app.ts/config.ts/database.ts, npm uninstall 7 packages (AU-01, AU-03, AU-04, AU-05, AU-06, AU-08 backend)
-- [ ] 04-02-PLAN.md — Delete 4 frontend auth files, modify hooks.ts/QueryProvider.tsx (AU-02, AU-07, AU-08 frontend)
+- [x] 04-02-PLAN.md — Delete 4 frontend auth files, modify hooks.ts/QueryProvider.tsx (AU-02, AU-07, AU-08 frontend)
 - [ ] 04-03-PLAN.md — Strip auth references from env.production.template, README.md, CLAUDE.md (D-01, D-02, D-03)
 
 ## Progress
@@ -119,4 +119,4 @@ Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phas
 | 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
 | 2. Yahoo Finance Migration | 4/4 | Complete   | 2026-05-20 |
 | 3. Static Export Hardening | 3/3 | Complete   | 2026-05-20 |
-| 4. Auth Removal | 0/3 | Not started | - |
+| 4. Auth Removal | 1/3 | In Progress|  |

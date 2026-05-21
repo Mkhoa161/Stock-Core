@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 3 context gathered
-last_updated: "2026-05-20T19:13:24.102Z"
-last_activity: 2026-05-20
+status: executing
+stopped_at: Completed 04-auth-removal 04-02-PLAN.md
+last_updated: "2026-05-21T00:01:18.484Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
   percent: 75
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Every S&P 500 ticker shows accurate market data and a working historical price chart.
-**Current focus:** Phase 03 — static-export-hardening
+**Current focus:** Phase 04 — auth-removal
 
 ## Current Position
 
-Phase: 02 (yahoo-finance-migration) — COMPLETE ✓
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-05-20
+Phase: 04 (auth-removal) — Ready to execute
+Plan: 1 of 3
+Status: Ready to execute
+Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 02-yahoo-finance-migration P01 | 20 | 3 tasks | 2 files |
 | Phase 02-yahoo-finance-migration P03 | 15 | 3 tasks | 2 files |
 | Phase 03-static-export-hardening P02 | 30s | 3 tasks | 3 files |
+| Phase 04-auth-removal P02 | 8 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,7 @@ Recent decisions affecting current work:
 - [Phase ?]: changePercent PERCENT units confirmed — getBulkQuotes passthrough correct; getCombinedCompanyData x100 removed
 - [Phase ?]: HTTPError via yahooFinance.errors['HTTPError'] — subpath import fails under nodenext
 - [Phase ?]: getBulkCompanyProfiles used for stale-only profile fetch; getCompanyProfile singular does not exist
+- [Phase ?]: Deleted four auth-only frontend files wholesale (AuthGuard.tsx, AuthProvider.tsx, contexts.ts, queries.ts) — no reusable logic worth preserving
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-20T19:13:21.470Z
-Stopped at: Phase 3 context gathered
+Last session: 2026-05-21T00:01:18.477Z
+Stopped at: Completed 04-auth-removal 04-02-PLAN.md
 Resume file: None
