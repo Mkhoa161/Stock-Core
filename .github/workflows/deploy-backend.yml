@@ -1,0 +1,68 @@
+name: Deploy Backend
+
+on:
+  push:
+    tags:
+      - 'v*.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./backend
+        run: npm test
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+        run: |
+          docker build -t "$ECR_REGISTRY:${{ github.ref_name }}" -t "$ECR_REGISTRY:latest" ./backend
+          docker push "$ECR_REGISTRY:${{ github.ref_name }}"
+          docker push "$ECR_REGISTRY:latest"
+
+      - name: Restart container on EC2
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          envs: ECR_REGISTRY,GITHUB_REF_NAME
+          script: |
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+            IMAGE_URI=$ECR_REGISTRY:$GITHUB_REF_NAME docker compose -f ~/docker-compose.prod.yml pull && IMAGE_URI=$ECR_REGISTRY:$GITHUB_REF_NAME docker compose -f ~/docker-compose.prod.yml up -d
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
