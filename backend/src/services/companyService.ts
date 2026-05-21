@@ -28,6 +28,55 @@ export class CompanyService {
     return result.rows;
   }
 
+  async getAllCompaniesWithLatestDataPaginated(
+    page: number,
+    limit: number,
+    search: string,
+  ): Promise<{ data: CompanyWithLatestData[]; total: number }> {
+    const offset = (page - 1) * limit;
+    const searchParam = search ? '%' + search.toLowerCase() + '%' : null;
+
+    const whereCore = `
+      WHERE (ds.date = (SELECT MAX(date) FROM daily_summaries WHERE company_id = c.id) OR ds.date IS NULL)
+    `;
+    const searchClause = `AND (LOWER(c.ticker) LIKE $1 OR LOWER(c.name) LIKE $1 OR LOWER(c.sector) LIKE $1 OR LOWER(c.industry) LIKE $1)`;
+    const searchClauseData = `AND (LOWER(c.ticker) LIKE $3 OR LOWER(c.name) LIKE $3 OR LOWER(c.sector) LIKE $3 OR LOWER(c.industry) LIKE $3)`;
+
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM companies c
+      LEFT JOIN daily_summaries ds ON c.id = ds.company_id
+      ${whereCore}
+      ${searchParam ? searchClause : ''}
+    `;
+    const countParams = searchParam ? [searchParam] : [];
+
+    const dataQuery = `
+      SELECT
+        c.*,
+        ds.price as latest_price,
+        ds.day_change as latest_day_change,
+        ds.day_change_percent as latest_day_change_percent,
+        ds.market_cap as latest_market_cap,
+        ds.volume as latest_volume
+      FROM companies c
+      LEFT JOIN daily_summaries ds ON c.id = ds.company_id
+      ${whereCore}
+      ${searchParam ? searchClauseData : ''}
+      ORDER BY c.ticker
+      LIMIT $1 OFFSET $2
+    `;
+    const dataParams = searchParam ? [limit, offset, searchParam] : [limit, offset];
+
+    const countResult = await dbInterface.query(countQuery, countParams);
+    const dataResult = await dbInterface.query(dataQuery, dataParams);
+
+    return {
+      data: dataResult.rows,
+      total: parseInt(countResult.rows[0].total, 10),
+    };
+  }
+
   async getCompanyByTicker(ticker: string): Promise<Company | null> {
     const query = 'SELECT * FROM companies WHERE ticker = $1';
     const result = await dbInterface.query(query, [ticker.toUpperCase()]);
