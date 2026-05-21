@@ -82,7 +82,11 @@ Cross-cutting constraints: All resources in us-east-1; VPC ID and subnet IDs fro
   2. The same tag push triggers `deploy-frontend.yml`; the workflow builds the static export, syncs `out/` to S3, and invalidates CloudFront — new bundle visible at the CloudFront URL
   3. A failing `npm test` result aborts the backend deploy before any image is pushed to ECR
   4. `docs/deployment.md` documents all 7 required GitHub secrets; a developer following the doc can configure a fresh repo and trigger a successful deploy
-**Plans**: TBD
+**Plans**: 2 plans in 1 wave
+
+**Wave 1** *(parallel — both plans fully independent)*
+- [ ] 07-01-PLAN.md — deploy-backend.yml: test gate (npm test) → ECR push (git tag + latest) → EC2 SSH restart (CICD-01, CICD-04)
+- [ ] 07-02-PLAN.md — deploy-frontend.yml: next build gate → S3 sync → CloudFront invalidation + docs/deployment.md: all 7 secrets, Terraform retrieval commands, first-time EC2 checklist, manual recovery procedure (CICD-02, CICD-03)
 
 ### Phase 8: Pagination
 **Goal**: Users can browse all 500+ companies without loading everything at once, and can search with instant feedback
@@ -108,7 +112,7 @@ Cross-cutting constraints: All resources in us-east-1; VPC ID and subnet IDs fro
 **Requirements**: DESIGN-01, DESIGN-02, DESIGN-03, DESIGN-04, CHART-01, CHART-02, CHART-03, CHART-04
 **Success Criteria** (what must be TRUE):
   1. Company list table has a sticky header that stays visible while scrolling; rows show hover highlight and alternating zebra stripe; nav bar highlights the active route
-  2. Company detail page displays price in large text; positive day change is green with ▲; negative day change is red with ▼; chart section is visually separated from price info
+  2. Company detail page displays price in large text; positive day change is green with ▲; negative day change is red with ▼; chart section visually separated from price info
   3. Historical price chart renders correct OHLCV candlesticks for at least 5 representative tickers (e.g., AAPL, TSLA, SHW) with zero ECharts console errors
   4. Chart container shows a loading skeleton while data is fetching; shows a styled "No historical data available" empty state for tickers with zero price records
 **Plans**: TBD
@@ -126,6 +130,6 @@ Cross-cutting constraints: All resources in us-east-1; VPC ID and subnet IDs fro
 | 4. Auth Removal | v1.0 | 3/3 | Done | 2026-05-21 |
 | 5. Backend AWS Infrastructure | v1.1 | 0/5 | Planned | - |
 | 6. Docker Image Hardening | v1.1 | 0/1 | Planned | - |
-| 7. CI/CD Pipelines | v1.1 | 0/? | Not started | - |
+| 7. CI/CD Pipelines | v1.1 | 0/2 | Planned | - |
 | 8. Pagination | v1.1 | 2/2 | Complete   | 2026-05-21 |
 | 9. Visual Polish | v1.1 | 0/? | Not started | - |
