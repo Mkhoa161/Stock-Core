@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Database Foundation** - Stabilize the connection layer and data access patterns as prerequisite for all concurrent writes
 - [x] **Phase 2: Yahoo Finance Migration** - Complete the data pipeline so Lambda collects all 500 tickers reliably within the 15-min timeout (completed 2026-05-20)
 - [x] **Phase 3: Static Export Hardening** - Make next build hermetically generate all 500 pre-rendered pages every time (completed 2026-05-20)
-- [ ] **Phase 4: Auth Removal** - Delete all auth dead code so the codebase compiles clean as a public read-only dashboard
+- [x] **Phase 4: Auth Removal** - Delete all auth dead code so the codebase compiles clean as a public read-only dashboard (completed 2026-05-21)
 
 ## Phase Details
 
@@ -105,9 +105,9 @@ Plans:
 Plans:
 **Wave 1** *(all parallel — no shared files)*
 
-- [ ] 04-01-PLAN.md — Delete 6 backend auth files, modify app.ts/config.ts/database.ts, npm uninstall 7 packages (AU-01, AU-03, AU-04, AU-05, AU-06, AU-08 backend)
+- [x] 04-01-PLAN.md — Delete 6 backend auth files, modify app.ts/config.ts/database.ts, npm uninstall 7 packages (AU-01, AU-03, AU-04, AU-05, AU-06, AU-08 backend)
 - [x] 04-02-PLAN.md — Delete 4 frontend auth files, modify hooks.ts/QueryProvider.tsx (AU-02, AU-07, AU-08 frontend)
-- [ ] 04-03-PLAN.md — Strip auth references from env.production.template, README.md, CLAUDE.md (D-01, D-02, D-03)
+- [x] 04-03-PLAN.md — Strip auth references from env.production.template, README.md, CLAUDE.md (D-01, D-02, D-03)
 
 ## Progress
 
@@ -119,4 +119,4 @@ Phases 1 and 4 are independent starting points. Phase 2 depends on Phase 1. Phas
 | 1. Database Foundation | 2/2 | ✓ Complete | 2026-05-20 |
 | 2. Yahoo Finance Migration | 4/4 | Complete   | 2026-05-20 |
 | 3. Static Export Hardening | 3/3 | Complete   | 2026-05-20 |
-| 4. Auth Removal | 1/3 | In Progress|  |
+| 4. Auth Removal | 3/3 | Complete   | 2026-05-21 |
