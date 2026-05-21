@@ -4,11 +4,17 @@ import { historicalDataService } from '../services/historicalDataService';
 
 const router = Router();
 
-// Get all companies with latest data (dashboard)
+// Get all companies with pagination and search
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const companies = await companyService.getAllCompaniesWithLatestData();
-    res.json(companies);
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+    const search = ((req.query.search as string) || '').trim();
+
+    const { data, total } = await companyService.getAllCompaniesWithLatestDataPaginated(page, limit, search);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({ data, total, page, limit, totalPages });
   } catch (error: any) {
     res.status(500).json({ message: 'Failed to fetch companies', error: error.message });
   }
